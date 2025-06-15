@@ -1,0 +1,21 @@
+.comboboxContainer {
+  display: flex;
+  align-items: center;
+  width: 300px;
+  position: absolute;
+  top: 20%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+}
+
+.pokemonDexNumber {
+  font-size: 12px;
+  line-height: 16px;
+  color: black;
+  border: 1px solid black;
+  padding: 0px 6px;
+  border-radius: 4px;
+  background-color: lightgrey;
+  margin-left: 6px;
+}
