@@ -1,6 +1,13 @@
 "use client"
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import React, {
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 import styles from "./styles.module.css"
 import species from "../../species.json"
 import animationMap from "../../animationMap.json"
@@ -93,7 +100,9 @@ function PokemonClientPage({
 }) {
   return (
     <QueryClientProvider client={queryClient}>
-      <PokemonData params={{ pokemon }} children={children} />
+      <Suspense>
+        <PokemonData params={{ pokemon }} children={children} />
+      </Suspense>
     </QueryClientProvider>
   )
 }
