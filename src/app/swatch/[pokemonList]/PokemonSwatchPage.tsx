@@ -226,7 +226,7 @@ function PokemonTeamPage() {
           Credits: Portions of this website utilize assets and code from the
           PokéRogue project, which is licensed under the AGPL-3.0 License. In
           accordance with this license, the source code for this website is
-          available at: github.com
+          available at: https://github.com/pjung16/pokeswatch
         </div>
         <div>© 2025 PokeSwatch. All rights reserved.</div>
       </footer>
