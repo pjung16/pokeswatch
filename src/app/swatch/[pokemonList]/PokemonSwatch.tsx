@@ -12,6 +12,8 @@ import {
 import { TColorData, TColorFormat, TPokemonAnimationKey } from "../../types"
 import {
   formattedColor,
+  getPokemonSpriteURL,
+  getShinyPokemonSprites,
   pokemonFormsToExclude,
   pokemonNameToQueryableName,
   rgbToHex,
@@ -24,10 +26,10 @@ import PokemonSpriteAnimator, {
 } from "../../components/PokemonSpriteAnimator"
 import animationMap from "../../animationMap.json"
 import ContentCopyIcon from "@mui/icons-material/ContentCopy"
-import { useRouter } from "next/navigation"
 import CopyToClipboard from "@/app/components/CopyToClipboard"
 import styles from "./styles.module.css"
 import classNames from "classnames"
+import Link from "next/link"
 
 type PokemonIdMap = Record<string, number>
 export const typedPokemonIdMap: PokemonIdMap = pokemonIdMap
@@ -78,26 +80,67 @@ const PokemonSwatch: React.FC<PokemonSwatchProps> = ({
     "gastrodon",
     "shellos",
     "unown",
+    "burmy",
+    "florges",
+    "flabebe",
+    "floette",
   ]
 
   const foundException = exceptionPokemon.find((ex) =>
     selectedPokemon.includes(ex)
   )
-  const imgUrl =
-    "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@613b7d0/sprites/pokemon/" +
-    pokemonId +
-    (foundException ? selectedPokemon.replace(foundException, "") : "") +
-    ".png"
-
-  // console.log(imgUrl)
-
-  // console.log(pokemonId)
-  // console.log(selectedPokemon)
-
   // const imgUrl =
   //   "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@613b7d0/sprites/pokemon/" +
   //   pokemonId +
+  //   (foundException ? selectedPokemon.replace(foundException, "") : "") +
   //   ".png"
+
+  // Queries
+  const { data: pokemonData, isLoading } = useQuery({
+    queryKey: ["getPokemon", selectedPokemon],
+    queryFn: () => getPokemon(),
+    refetchOnWindowFocus: false,
+  })
+
+  // const {
+  //   data: speciesDataFromQuery,
+  //   isSuccess: speciesDataSucceeded,
+  //   isLoading: speciesIsLoading,
+  // } = useQuery({
+  //   queryKey: ["getPokemonSpecies", selectedPokemon],
+  //   queryFn: getPokemonSpecies,
+  //   refetchOnWindowFocus: false,
+  // })
+
+  // useEffect(() => {
+  //   if (speciesDataSucceeded && speciesDataFromQuery) {
+  //     setSpeciesData(speciesDataFromQuery)
+  //   }
+  // }, [speciesDataSucceeded, speciesDataFromQuery])
+
+  const animationMapKey =
+    animationMap[
+      (selectedPokemon ?? pokemonFromInput.label) as TPokemonAnimationKey
+    ]
+
+  const isInnateForm = pokemonData?.forms.find(
+    (form, idx) => form.name === selectedPokemon && idx > 0
+  )
+  const pokeApiUrl =
+    "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@613b7d0/sprites/pokemon/" +
+    // (showShinySprite ? "shiny/" : "") +
+    pokemonData?.id +
+    (isInnateForm
+      ? selectedPokemon?.replace(pokemonData?.name ?? "", "")
+      : selectedPokemon) +
+    ".png"
+  const pokeRogueUrl = `https://cdn.jsdelivr.net/gh/pagefaultgames/pokerogue@02cac77/public/images/pokemon/${animationMapKey}.png`
+  const imgUrl = getPokemonSpriteURL(
+    selectedPokemon ?? pokemonData?.name ?? pokemon,
+    parseInt(`${pokemonFromInput.id}`),
+    pokeApiUrl,
+    pokeRogueUrl
+  )
 
   useEffect(() => {
     if (!imgRef.current) return
@@ -112,7 +155,6 @@ const PokemonSwatch: React.FC<PokemonSwatchProps> = ({
         "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@613b7d0/sprites/pokemon/" +
         pokemonId +
         ".png"
-      console.log(newUrl)
       imgRef.current.src = newUrl
     }
 
@@ -272,6 +314,7 @@ const PokemonSwatch: React.FC<PokemonSwatchProps> = ({
         pokemonNameToQueryableName(overrideName ?? selectedPokemon)
       )
       .then((data) => {
+        console.log(data)
         api.pokemon
           .getPokemonSpeciesByName(data.species.name)
           .then((data) => {
@@ -301,32 +344,16 @@ const PokemonSwatch: React.FC<PokemonSwatchProps> = ({
   //   )
   // }
 
-  // Queries
-  const { data: pokemonData, isLoading } = useQuery({
-    queryKey: ["getPokemon", selectedPokemon],
-    queryFn: () => getPokemon(),
-    refetchOnWindowFocus: false,
-  })
-
-  // const {
-  //   data: speciesDataFromQuery,
-  //   isSuccess: speciesDataSucceeded,
-  //   isLoading: speciesIsLoading,
-  // } = useQuery({
-  //   queryKey: ["getPokemonSpecies", selectedPokemon],
-  //   queryFn: getPokemonSpecies,
-  //   refetchOnWindowFocus: false,
-  // })
-
-  // useEffect(() => {
-  //   if (speciesDataSucceeded && speciesDataFromQuery) {
-  //     setSpeciesData(speciesDataFromQuery)
-  //   }
-  // }, [speciesDataSucceeded, speciesDataFromQuery])
-
   useEffect(() => {
     // can be undefined, we only want it to run this when it's false
-    if (pokemonData?.is_default === false) {
+    // setPokemonFromInput({
+    //   label: pokemonData?.name ?? selectedPokemon,
+    //   id: `${speciesData?.id ?? typedPokemonIdMap[selectedPokemon]}`,
+    // })
+    if (
+      pokemonData?.is_default === false ||
+      pokemonFromInput.id === undefined
+    ) {
       setPokemonFromInput({
         label: pokemonData?.name ?? selectedPokemon,
         id: `${speciesData?.id ?? typedPokemonIdMap[selectedPokemon]}`,
@@ -344,7 +371,7 @@ const PokemonSwatch: React.FC<PokemonSwatchProps> = ({
     // need to check if the species names match because sometimes there were formOptions from 2 different pokemon
     const forms =
       pokemonData?.species.name === speciesData?.name
-        ? pokemonData?.forms?.map((form) => ({
+        ? pokemonData?.forms.slice(1).map((form) => ({
             id: `${pokemonData.id}`,
             label: form.name,
           })) || []
@@ -381,11 +408,6 @@ const PokemonSwatch: React.FC<PokemonSwatchProps> = ({
   const [noAnimDataExists, setNoAnimDataExists] = useState<boolean>(false)
   const [hasRetried, setHasRetried] = useState<boolean>(false)
 
-  const animationMapKey =
-    animationMap[
-      (selectedPokemon ?? pokemonFromInput.label) as TPokemonAnimationKey
-    ]
-
   const animatedImageSrc = `https://cdn.jsdelivr.net/gh/pagefaultgames/pokerogue@02cac77/public/images/pokemon/exp/${animationMapKey}.png`
   const animatedImageJson = `https://cdn.jsdelivr.net/gh/pagefaultgames/pokerogue@02cac77/public/images/pokemon/exp/${animationMapKey}.json`
   const animatedImageRetrySrc = `https://cdn.jsdelivr.net/gh/pagefaultgames/pokerogue@02cac77/public/images/pokemon/${animationMapKey}.png`
@@ -417,14 +439,16 @@ const PokemonSwatch: React.FC<PokemonSwatchProps> = ({
     animatedImageRetryJson,
   ])
 
-  const router = useRouter()
-
-  const navigateToPokemon = () => {
+  const pokemonUrl = (() => {
     if (speciesData && pokemonData) {
       const formUrl = pokemonData.is_default ? "" : `?form=${pokemonData.name}`
-      router.push(`/pokemon/${speciesData?.name}${formUrl}`)
+      const isInnateForm = pokemonData.forms.find(
+        (form, idx) => form.name === selectedPokemon && idx > 0
+      )
+      const innateFormUrl = isInnateForm ? `?form=${selectedPokemon}` : ""
+      return `/pokemon/${speciesData?.name}${formUrl}${innateFormUrl}`
     }
-  }
+  })()
 
   return (
     <div
@@ -531,40 +555,49 @@ const PokemonSwatch: React.FC<PokemonSwatchProps> = ({
             <div className={styles.button} />
           </div>
         ) : !showAnimations || !animData ? (
-          <img
+          <Link
+            href={pokemonUrl ?? "/"}
             style={{
-              imageRendering: "pixelated",
               position: "absolute",
               transform: "translate(-50%, -50%)",
               top: "54%",
               left: "50%",
-              height: "150px",
-              cursor: "pointer",
             }}
-            src={spriteImageUrl}
-            alt={selectedPokemon}
-            onClick={navigateToPokemon}
-          />
+          >
+            <img
+              style={{
+                imageRendering: "pixelated",
+                height: "150px",
+              }}
+              src={spriteImageUrl}
+              alt={selectedPokemon}
+              // onClick={navigateToPokemon}
+            />
+          </Link>
         ) : (
-          <PokemonSpriteAnimator
+          <Link
+            href={pokemonUrl ?? "/"}
             style={{
-              imageRendering: "pixelated",
               position: "absolute",
               transform: "translate(-50%, -50%)",
               top: "54%",
               left: "50%",
-              height: "150px",
-              cursor: "pointer",
             }}
-            spriteUrl={hasRetried ? animatedImageRetrySrc : animatedImageSrc}
-            animationData={animData}
-            fallbackAnimation={
-              pokemonData?.sprites.versions["generation-v"]["black-white"]
-                .animated.front_default ?? spriteImageUrl
-            }
-            interval={100} // 100ms between frames
-            onClick={navigateToPokemon}
-          />
+          >
+            <PokemonSpriteAnimator
+              style={{
+                imageRendering: "pixelated",
+                height: "150px",
+              }}
+              spriteUrl={hasRetried ? animatedImageRetrySrc : animatedImageSrc}
+              animationData={animData}
+              fallbackAnimation={
+                pokemonData?.sprites.versions["generation-v"]["black-white"]
+                  .animated.front_default ?? spriteImageUrl
+              }
+              interval={100} // 100ms between frames
+            />
+          </Link>
         )}
         {colors.map((color, index) => {
           const hexColor = color.color

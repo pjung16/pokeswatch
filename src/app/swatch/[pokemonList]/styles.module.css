@@ -14,7 +14,6 @@
 .appHeader {
   display: flex;
   align-items: center;
-  margin-left: 25px;
   position: relative;
 }
 
@@ -130,12 +129,12 @@
 
 .pbSwatchPage {
   .top {
-    background: #ffffff;
+    background: #ce372f;
     overflow: hidden;
 
     &::before {
-      border-left: 1.35em solid #ffee4a;
-      border-right: 1.35em solid #cd8b10;
+      border-left: 1.35em solid #e54545;
+      border-right: 1.35em solid rgb(186, 43, 50);
       box-sizing: inherit;
       content: "";
       height: 2em;
@@ -484,7 +483,7 @@
   margin-right: 50px !important;
   padding: 7px;
   border-radius: 50% !important;
-  background-color: #ffc510CC !important;
+  background-color: #ffa1a1 !important;
   filter: brightness(100%);
   transition: all 0.2s ease-in-out !important;
 }
@@ -840,11 +839,11 @@
 }
 
 .randomizeButton {
-  border: 2px solid #ffc510;
+  border: 2px solid #ffa1a1;
 }
 
 .supportButton {
-  background-color: #ffc510;
+  background-color: #ffa1a1;
 }
 
 .mobileButtonSwatchPage {

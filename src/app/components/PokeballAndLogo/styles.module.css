@@ -1,0 +1,104 @@
+.pokeballandLogoContainer {
+  margin-left: 25px;
+  display: flex;
+  align-items: center;
+}
+
+.pokeball {
+  border: 0.20em solid #000;
+  border-radius: 100%;
+  box-sizing: content-box;
+  font-size: 16px;
+  height: 4em;
+  margin: 15px;
+  overflow: hidden;
+  position: relative;
+  width: 4em;
+  background: white;
+  cursor: pointer;
+
+  &>.top {
+    border-bottom: 0.25em solid #000;
+    box-sizing: inherit;
+    height: 0;
+    padding-bottom: 0.9375em;
+    padding-top: 0.9375em;
+    position: relative;
+  }
+
+  &>.button {
+    background: #fff;
+    border: 0.2em solid #000;
+    border-radius: 100%;
+    box-sizing: inherit;
+    height: 1.2em;
+    left: 50%;
+    position: absolute;
+    top: 50%;
+    width: 1.2em;
+    transform: translate(-50%, -50%);
+
+    &::before {
+      border: 0px solid #888;
+      border-radius: 100%;
+      content: "";
+      height: 0.5em;
+      left: 50%;
+      position: absolute;
+      top: 50%;
+      width: 0.5em;
+      transform: translate(-50%, -50%);
+    }
+  }
+}
+
+.pbHyper {
+  .top {
+    background: var(--color2);
+    overflow: hidden;
+
+    &::before {
+      border-left: 1.35em solid var(--color1);
+      border-right: 1.35em solid var(--color3);
+      box-sizing: inherit;
+      content: "";
+      height: 2em;
+      left: 0;
+      position: absolute;
+      top: 0;
+      width: 1.35em;
+    }
+  }
+}
+
+.logo {
+  font-family: Sen;
+}
+
+@media only screen and (max-width: 1096px) {
+  .pokeball:not(.loader):not(.swatchLoader):not(.homepagepokeball) {
+    margin-left: 130px;
+  }
+}
+
+@media only screen and (max-width: 766px) {
+  .pokeball:not(.loader):not(.swatchLoader):not(.homepagepokeball) {
+    margin-left: 50px;
+  }
+}
+
+@media only screen and (max-width: 550px) {
+  .pokeball:not(.loader):not(.swatchLoader):not(.homepagepokeball) {
+    margin-left: 10px;
+    transform: scale(0.8);
+    margin-right: 7px;
+  }
+
+  .pokeballandLogoContainer {
+    margin-left: 0;
+  }
+
+  .logo {
+    font-size: 22px;
+  }
+}

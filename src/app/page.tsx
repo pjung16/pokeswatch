@@ -1,95 +1,79 @@
-import Image from "next/image"
+"use client"
 import styles from "./page.module.css"
+import PokeballAndLogo from "./components/PokeballAndLogo"
+import { EmptyPokemonCombobox } from "./components/PokemonCombobox/EmptyPokemonCombobox"
+import {
+  getPokemonIcon,
+  navigateToRandomPokemon,
+  speciesToOptions,
+} from "./utils"
+import species from "./species.json"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { useWindowDimensions } from "./hooks"
+
+const autocompleteOptions = speciesToOptions(species)
 
 export default function Home() {
-  return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol>
-          <li>
-            Get started by editing <code>src/app/page.tsx</code>.
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const router = useRouter()
 
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
+  const style: React.CSSProperties = {
+    ["--color1" as any]: "#e54545",
+    ["--color2" as any]: "#ce372f",
+    ["--color3" as any]: "rgb(186, 43, 50)",
+  }
+
+  const randomNumbers = Array.from({ length: 1025 }, (_, i) => i + 1)
+  const pokemonIcons = randomNumbers.map(getPokemonIcon)
+  const iconProps = pokemonIcons.map((icon, idx) => {
+    const gridWidth = 41
+    const gridHeight = 25
+    const cellWidth = 100 / gridWidth
+    const cellHeight = 100 / gridHeight
+    const row = Math.floor(idx / gridWidth)
+    const col = idx % gridWidth
+    const top = `${row * cellHeight}%`
+    const left = `${col * cellWidth}%`
+    return {
+      background: icon,
+      top,
+      left,
+    }
+  })
+
+  return (
+    <div style={style} className={styles.appContainer}>
+      <div className={styles.backgroundIconsContainer}>
+        {pokemonIcons.map((icon, index) => {
+          return (
+            <div
+              key={icon}
+              className={styles.pokemonIcon}
+              style={iconProps.at(index)}
             />
-            Deploy now
-          </a>
-          <a
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.secondary}
+          )
+        })}
+      </div>
+      <header>
+        <PokeballAndLogo isHomePage />
+      </header>
+      <main className={styles.main}>
+        <div className={styles.mainText}>
+          Discover your favorite Pokémon and their colors!
+        </div>
+        <EmptyPokemonCombobox />
+        <div className={styles.buttonsContainer}>
+          <div
+            onClick={() => navigateToRandomPokemon(autocompleteOptions, router)}
+            className={styles.button}
           >
-            Read our docs
-          </a>
+            Random Pokemon
+          </div>
+          <Link href="/swatch" className={styles.button}>
+            Create Swatch
+          </Link>
         </div>
       </main>
-      <footer className={styles.footer}>
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
     </div>
   )
 }

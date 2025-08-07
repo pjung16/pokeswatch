@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import "./globals.css"
 import { Inconsolata, Sen } from "next/font/google"
+import { getPokemonIcon } from "./utils"
 
 const inconsolata = Inconsolata({
   variable: "--font-inconsolata",

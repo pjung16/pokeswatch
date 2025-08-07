@@ -5,11 +5,6 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       {
-        source: "/",
-        destination: "/pokemon/ampharos",
-        permanent: false,
-      },
-      {
         source: "/pokemon",
         destination: "/pokemon/ampharos",
         permanent: false,

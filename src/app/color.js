@@ -377,6 +377,11 @@ const specialPokemonCases = {
     type: "topNColors",
     value: 5,
   },
+  // Meowth
+  52: {
+    type: "topNColors",
+    value: 5,
+  },
   // Frosmoth
   873: {
     type: "topNColors",
@@ -487,6 +492,14 @@ const specialPokemonCases = {
       ["144", "154", "165"],
       ["195", "232", "234"],
       ["223", "224", "223"],
+    ],
+  },
+  // Ampharos
+  181: {
+    type: "handPickedColors",
+    value: [
+      ["255", "238", "74"],
+      ["255", "197", "16"],
     ],
   },
 }

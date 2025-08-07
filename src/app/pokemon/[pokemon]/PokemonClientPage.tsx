@@ -88,6 +88,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import classNames from "classnames"
 import { usePokemonPageContext } from "../context/PokemonPageContext"
 import ListboxComponent from "@/app/components/VirtualizedListboxComponent"
+import PokeballAndLogo from "@/app/components/PokeballAndLogo"
 // Create a client
 const queryClient = new QueryClient()
 
@@ -733,16 +734,7 @@ function PokemonData({
   return (
     <div className={styles.app} style={style}>
       <header className={styles.appHeader}>
-        <div className={styles.pokeballandLogoContainer}>
-          <div
-            className={classNames(styles.pokeball, styles.pbHyper)}
-            onClick={chooseRandomPokemon}
-          >
-            <div className={styles.top}></div>
-            <div className={styles.button} />
-          </div>
-          <h1 className={styles.logo}>PokeSwatch</h1>
-        </div>
+        <PokeballAndLogo />
         <div className={styles.pokemonTeamAndComboboxWrapper}>
           <div className={styles.comboboxContainer}>
             <Autocomplete
@@ -1241,7 +1233,8 @@ function PokemonData({
                       })}
                       {(
                         ((speciesData?.varieties ?? []).length
-                          ? pokemonData?.forms.slice(1)
+                          ? // we're excluding the default form from the forms list
+                            pokemonData?.forms.slice(1)
                           : pokemonData?.forms) ?? []
                       ).map((f, idx) => (
                         <MenuItem

@@ -19,3 +19,16 @@
   background-color: lightgrey;
   margin-left: 6px;
 }
+
+.emptyComboboxContainer {
+  display: flex;
+  align-items: center;
+  width: 40%;
+  z-index: 10;
+}
+
+@media only screen and (max-width: 900) {
+  .emptyComboboxContainer {
+    width: 70%;
+  }
+}

@@ -10,6 +10,8 @@ import species from "../species.json"
 import SettingsIcon from "@mui/icons-material/Settings"
 import ShuffleIcon from "@mui/icons-material/Shuffle"
 import { SwatchPageProvider, useSwatchPageContext } from "./SwatchPageContext"
+import Link from "next/link"
+import PokeballAndLogo from "../components/PokeballAndLogo"
 
 const autocompleteOptions = speciesToOptions(species)
 
@@ -40,10 +42,6 @@ function SwatchInnerLayout({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const randomizePokemon = () => {
-    router.push("/swatch")
-  }
-
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null)
   const open = Boolean(anchorEl)
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -53,17 +51,16 @@ function SwatchInnerLayout({ children }: { children: React.ReactNode }) {
     setAnchorEl(null)
   }
 
+  const style: React.CSSProperties = {
+    ["--color1" as any]: "#e54545",
+    ["--color2" as any]: "#ce372f",
+    ["--color3" as any]: "rgb(186, 43, 50)",
+  }
+
   return (
-    <div>
+    <div style={style}>
       <header className={styles.appHeader}>
-        <div
-          className={classNames(styles.pokeball, styles.pbSwatchPage)}
-          onClick={chooseRandomPokemon}
-        >
-          <div className={styles.top}></div>
-          <div className={styles.button} />
-        </div>
-        <h1 className={styles.logo}>PokeSwatch</h1>
+        <PokeballAndLogo />
         <div
           style={{
             marginLeft: "auto",
@@ -72,15 +69,15 @@ function SwatchInnerLayout({ children }: { children: React.ReactNode }) {
             justifyContent: "center",
           }}
         >
-          <div
+          <Link
             className={classNames(
               styles.buttonSwatchPage,
               styles.randomizeButton
             )}
-            onClick={randomizePokemon}
+            href="/swatch"
           >
             Randomize
-          </div>
+          </Link>
           <a
             className={classNames(
               styles.buttonSwatchPage,
@@ -92,15 +89,15 @@ function SwatchInnerLayout({ children }: { children: React.ReactNode }) {
           >
             Support 🍕
           </a>
-          <div
+          <Link
             className={classNames(
               styles.mobileButtonSwatchPage,
               styles.randomizeButton
             )}
-            onClick={randomizePokemon}
+            href={"/swatch"}
           >
             <ShuffleIcon />
-          </div>
+          </Link>
           <a
             className={classNames(
               styles.mobileButtonSwatchPage,
@@ -140,12 +137,6 @@ function SwatchInnerLayout({ children }: { children: React.ReactNode }) {
               padding: "50px",
             }}
           >
-            {/* <MenuItem onClick={randomizePokemon}>Randomize</MenuItem>
-            <MenuItem
-              onClick={() => router.push("https://buymeacoffee.com/pjung16")}
-            >
-              Support
-            </MenuItem> */}
             <ListSubheader>Color Format</ListSubheader>
             <MenuItem onClick={() => setColorFormat("hex")}>Hex</MenuItem>
             <MenuItem

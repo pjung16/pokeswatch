@@ -4,6 +4,7 @@ import { BattlePokemonIconIndexes } from "./BattlePokemonIconIndexes"
 import { TPokemon } from "./types"
 import { hexToRgb } from "@mui/material"
 import { hexToHSL, hexToHSV } from "./color"
+import { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime"
 
 const getPokemonIconNum = (pokemon: string | number) => {
   let num = 0
@@ -437,4 +438,58 @@ export const pokemonFormsToExclude = [
   "koraidon-sprinting-build",
   "koraidon-swimming-build",
   "koraidon-gliding-build",
+  "scatterbug-meadow",
+  "scatterbug-icy-snow",
+  "scatterbug-polar",
+  "scatterbug-tundra",
+  "scatterbug-continental",
+  "scatterbug-garden",
+  "scatterbug-elegant",
+  "scatterbug-modern",
+  "scatterbug-marine",
+  "scatterbug-archipelago",
+  "scatterbug-high-plains",
+  "scatterbug-sandstorm",
+  "scatterbug-river",
+  "scatterbug-monsoon",
+  "scatterbug-savanna",
+  "scatterbug-sun",
+  "scatterbug-ocean",
+  "scatterbug-jungle",
+  "scatterbug-fancy",
+  "scatterbug-poke-ball",
+  "spewpa-meadow",
+  "spewpa-icy-snow",
+  "spewpa-polar",
+  "spewpa-tundra",
+  "spewpa-continental",
+  "spewpa-garden",
+  "spewpa-elegant",
+  "spewpa-modern",
+  "spewpa-marine",
+  "spewpa-archipelago",
+  "spewpa-high-plains",
+  "spewpa-sandstorm",
+  "spewpa-river",
+  "spewpa-monsoon",
+  "spewpa-savanna",
+  "spewpa-sun",
+  "spewpa-ocean",
+  "spewpa-jungle",
+  "spewpa-fancy",
+  "spewpa-poke-ball",
 ]
+
+export const navigateToRandomPokemon = (
+  autocompleteOptions: {
+    label: string
+    id: number
+  }[],
+  router: AppRouterInstance
+) => {
+  const randomNumber = Math.floor(Math.random() * 1025) + 1
+  const randomPokemon = autocompleteOptions.find((ao) => ao.id === randomNumber)
+  if (randomPokemon) {
+    router.push(`/pokemon/${randomPokemon.label}`)
+  }
+}
