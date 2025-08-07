@@ -103,9 +103,11 @@ const PokemonSwatch: React.FC<PokemonSwatchProps> = ({
       (selectedPokemon ?? pokemonFromInput.label) as TPokemonAnimationKey
     ]
 
+  // form that doesn't have a separate pokemon entry in the API
   const isInnateForm = pokemonData?.forms.find(
     (form, idx) => form.name === selectedPokemon && idx > 0
   )
+  const isDefaultForm = pokemonData?.is_default
   const pokeApiUrl =
     "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@613b7d0/sprites/pokemon/" +
     // (showShinySprite ? "shiny/" : "") +
@@ -115,18 +117,24 @@ const PokemonSwatch: React.FC<PokemonSwatchProps> = ({
       : selectedPokemon) +
     ".png"
   const pokeRogueUrl = `https://cdn.jsdelivr.net/gh/pagefaultgames/pokerogue@02cac77/public/images/pokemon/${animationMapKey}.png`
-  const imgUrl = getPokemonSpriteURL(
-    selectedPokemon ?? pokemonData?.name ?? pokemon,
-    parseInt(`${pokemonFromInput.id}`),
-    pokeApiUrl,
-    pokeRogueUrl
-  )
+  const imgUrl = pokemonData
+    ? isDefaultForm && !isInnateForm && pokemonData.sprites.front_default
+      ? pokeApiUrl
+      : getPokemonSpriteURL(
+          selectedPokemon ?? pokemonData?.name ?? pokemon,
+          parseInt(`${pokemonFromInput.id}`),
+          pokeApiUrl,
+          pokeRogueUrl
+        )
+    : undefined
 
   useEffect(() => {
     if (!imgRef.current) return
     imgRef.current.crossOrigin = "anonymous"
     imgRef.current.alt = selectedPokemon
-    imgRef.current.src = imgUrl
+    if (imgUrl) {
+      imgRef.current.src = imgUrl
+    }
 
     imgRef.current.onerror = () => {
       setIsLoadingImage(true)
@@ -145,6 +153,7 @@ const PokemonSwatch: React.FC<PokemonSwatchProps> = ({
         const croppedImage = await cropWhitespace(imgRef.current)
         setSpriteImageUrl(croppedImage)
       } catch (error) {
+        console.error(selectedPokemon, imgUrl)
         console.error("Error cropping image:", error)
       }
 
@@ -294,7 +303,6 @@ const PokemonSwatch: React.FC<PokemonSwatchProps> = ({
         pokemonNameToQueryableName(overrideName ?? selectedPokemon)
       )
       .then((data) => {
-        console.log(data)
         api.pokemon
           .getPokemonSpeciesByName(data.species.name)
           .then((data) => {

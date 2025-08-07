@@ -141,9 +141,6 @@ function SwatchInnerLayout({ children }: { children: React.ReactNode }) {
             <MenuItem onClick={() => setColorFormat("hex")}>Hex</MenuItem>
             <MenuItem
               onClick={() => {
-                console.log("running!")
-                console.log(setColorFormat)
-                console.log(colorFormat)
                 setColorFormat("rgb")
               }}
             >

@@ -38,7 +38,6 @@ function PokemonTeamPage() {
   )
   const router = useRouter()
   const { colorFormat, showAnimations } = useSwatchPageContext()
-  console.log(colorFormat, showAnimations)
 
   const updatePokemonRoute = (
     currentUrl: string,

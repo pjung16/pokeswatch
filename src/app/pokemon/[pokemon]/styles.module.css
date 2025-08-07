@@ -57,10 +57,6 @@
   margin-left: 6px;
 }
 
-.pokemonNameSmall {
-  font-size: 24px;
-}
-
 .pokemonSprites {
   display: flex;
   align-items: center;
@@ -615,8 +611,11 @@
 
   .pokemonTeamContainer {
     margin: 0 auto;
-    margin-bottom: 40px;
     min-width: 200px;
+  }
+
+  .contentContainerTopSection {
+    margin-top: 15px;
   }
 
   .pokeball:not(.loader):not(.swatchLoader) {
@@ -714,6 +713,11 @@
 
   .settingsIconSwatchPage {
     margin-right: 7px !important;
+  }
+
+  .footer {
+    padding: 20px 20px;
+    font-size: 12px;
   }
 }
 

@@ -346,7 +346,6 @@ export function parsePokemonUrlPath(
   urlPath: string,
   validKeys: Set<string>
 ): string[] {
-  console.log(urlPath)
   const tokens = urlPath.split("-")
   const results: string[] = []
 
@@ -478,6 +477,7 @@ export const pokemonFormsToExclude = [
   "spewpa-jungle",
   "spewpa-fancy",
   "spewpa-poke-ball",
+  "rockruff-own-tempo",
 ]
 
 export const navigateToRandomPokemon = (
