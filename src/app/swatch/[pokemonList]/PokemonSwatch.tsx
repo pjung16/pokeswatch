@@ -84,16 +84,12 @@ const PokemonSwatch: React.FC<PokemonSwatchProps> = ({
     "florges",
     "flabebe",
     "floette",
+    "silvally",
   ]
 
   const foundException = exceptionPokemon.find((ex) =>
     selectedPokemon.includes(ex)
   )
-  // const imgUrl =
-  //   "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@613b7d0/sprites/pokemon/" +
-  //   pokemonId +
-  //   (foundException ? selectedPokemon.replace(foundException, "") : "") +
-  //   ".png"
 
   // Queries
   const { data: pokemonData, isLoading } = useQuery({
@@ -101,22 +97,6 @@ const PokemonSwatch: React.FC<PokemonSwatchProps> = ({
     queryFn: () => getPokemon(),
     refetchOnWindowFocus: false,
   })
-
-  // const {
-  //   data: speciesDataFromQuery,
-  //   isSuccess: speciesDataSucceeded,
-  //   isLoading: speciesIsLoading,
-  // } = useQuery({
-  //   queryKey: ["getPokemonSpecies", selectedPokemon],
-  //   queryFn: getPokemonSpecies,
-  //   refetchOnWindowFocus: false,
-  // })
-
-  // useEffect(() => {
-  //   if (speciesDataSucceeded && speciesDataFromQuery) {
-  //     setSpeciesData(speciesDataFromQuery)
-  //   }
-  // }, [speciesDataSucceeded, speciesDataFromQuery])
 
   const animationMapKey =
     animationMap[
@@ -330,26 +310,8 @@ const PokemonSwatch: React.FC<PokemonSwatchProps> = ({
       })
   }
 
-  // const getPokemonSpecies = () => {
-  //   return (
-  //     api.pokemon
-  //       .getPokemonSpeciesByName(selectedPokemon)
-  //       .then((data) => data)
-  //       // .catch(() =>
-  //       //   api.pokemon.getPokemonSpeciesByName(
-  //       //     pokemonData?.species.name ?? selectedPokemon
-  //       //   )
-  //       // )
-  //       .catch((error) => console.error(error))
-  //   )
-  // }
-
   useEffect(() => {
     // can be undefined, we only want it to run this when it's false
-    // setPokemonFromInput({
-    //   label: pokemonData?.name ?? selectedPokemon,
-    //   id: `${speciesData?.id ?? typedPokemonIdMap[selectedPokemon]}`,
-    // })
     if (
       pokemonData?.is_default === false ||
       pokemonFromInput.id === undefined
@@ -502,42 +464,6 @@ const PokemonSwatch: React.FC<PokemonSwatchProps> = ({
           formOptions={formOptions}
           updatePokemonRoute={updatePokemonRoute}
         />
-        {/* <Autocomplete
-          options={
-            formOptions.length > 1
-              ? [...formOptions, ...autocompleteOptions]
-              : autocompleteOptions
-          }
-          groupBy={formOptions.length > 1 ? option => typeof option.id : undefined}
-          renderGroup={params => {
-            const group = params.group
-            const isPokemonGroup = group === 'string'
-            return (
-              <div>
-                <strong>{!isPokemonGroup ? 'Pokémon' : 'Forms'}</strong>
-                <div>{params.children}</div>
-              </div>
-            )
-          }}
-          getOptionLabel={option => option.label}
-          sx={{
-            width: 300,
-            position: 'absolute',
-            top: '20%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            backgroundColor: 'rgba(255, 255, 255, 0.8)',
-          }}
-          renderInput={params => <TextField {...params} />}
-          onChange={(event, newValue) => {
-            if (newValue) {
-              setSelectedPokemon(newValue.label)
-              setPokemonFromInput({id: newValue.id, label: newValue.label})
-              setSpriteImageUrl('')
-            }
-          }}
-          value={pokemonFromInput}
-        /> */}
         {isLoading ||
         // speciesIsLoading ||
         isLoadingImage ||

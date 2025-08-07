@@ -1116,21 +1116,19 @@ function PokemonData({
                 size="small"
                 disableRipple
               >
-                {data && data.sprites.front_shiny ? (
-                  showShinySprite ? (
-                    <AutoAwesomeIcon
-                      style={{
-                        cursor: "pointer",
-                      }}
-                    />
-                  ) : (
-                    <AutoAwesomeOutlinedIcon
-                      style={{
-                        cursor: "pointer",
-                      }}
-                    />
-                  )
-                ) : undefined}
+                {showShinySprite ? (
+                  <AutoAwesomeIcon
+                    style={{
+                      cursor: "pointer",
+                    }}
+                  />
+                ) : (
+                  <AutoAwesomeOutlinedIcon
+                    style={{
+                      cursor: "pointer",
+                    }}
+                  />
+                )}
               </Button>
               <Button
                 id="addToTeamButton"
