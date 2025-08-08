@@ -2,17 +2,11 @@
 import styles from "./page.module.css"
 import PokeballAndLogo from "./components/PokeballAndLogo"
 import { EmptyPokemonCombobox } from "./components/PokemonCombobox/EmptyPokemonCombobox"
-import {
-  getPokemonIcon,
-  navigateToRandomPokemon,
-  speciesToOptions,
-} from "./utils"
-import species from "./species.json"
+import { getPokemonIcon, navigateToRandomPokemon } from "./utils"
+import speciesMap from "./speciesMap.json"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useWindowDimensions } from "./hooks"
-
-const autocompleteOptions = speciesToOptions(species)
 
 export default function Home() {
   const router = useRouter()
@@ -55,7 +49,7 @@ export default function Home() {
         })}
       </div>
       <header>
-        <PokeballAndLogo isHomePage />
+        <PokeballAndLogo />
       </header>
       <main className={styles.main}>
         <div className={styles.mainText}>
@@ -64,7 +58,7 @@ export default function Home() {
         <EmptyPokemonCombobox />
         <div className={styles.buttonsContainer}>
           <div
-            onClick={() => navigateToRandomPokemon(autocompleteOptions, router)}
+            onClick={() => navigateToRandomPokemon(speciesMap, router)}
             className={styles.button}
           >
             Random Pokemon

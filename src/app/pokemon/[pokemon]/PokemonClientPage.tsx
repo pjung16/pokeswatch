@@ -89,6 +89,7 @@ import classNames from "classnames"
 import { usePokemonPageContext } from "../context/PokemonPageContext"
 import ListboxComponent from "@/app/components/VirtualizedListboxComponent"
 import PokeballAndLogo from "@/app/components/PokeballAndLogo"
+import SortableWrapList from "@/app/components/SortableWrapList"
 // Create a client
 const queryClient = new QueryClient()
 
@@ -131,7 +132,7 @@ function PokemonData({
     },
     [searchParams]
   )
-  const [tab, setTab] = useState<TTab>("types")
+  const [tab, setTab] = useState<TTab>("evolution")
 
   const [showShinySprite, setShowShinySprite] = useState<boolean>(false)
 
@@ -221,16 +222,6 @@ function PokemonData({
   const [pokemonForm, setPokemonForm] = useState<string | undefined>(undefined)
   const [pokemonAbilities, setPokemonAbilities] = useState<Ability[]>([])
   const { navigate } = usePokemonNavigate(setIsAbsoluteLoading)
-
-  const chooseRandomPokemon = () => {
-    const randomNumber = Math.floor(Math.random() * 1025) + 1
-    const randomPokemon = autocompleteOptions.find(
-      (ao) => ao.id === randomNumber
-    )
-    if (randomPokemon) {
-      navigate(`/pokemon/${randomPokemon.label}`)
-    }
-  }
 
   // Queries
   const { data: dataFromApi, isLoading } = useQuery({
@@ -1481,56 +1472,11 @@ function PokemonData({
                   formattedColor(color, colorFormat)
                 }
               />
-              {colorData.slice(0, 10).map((cd) => (
-                <CopyToClipboard
-                  key={cd.color}
-                  text={
-                    colorFormat === "hex"
-                      ? formattedColor(cd.color, colorFormat)
-                      : formattedColor(cd.color, colorFormat).replace(
-                          /[^0-9,#]/g,
-                          ""
-                        )
-                  }
-                >
-                  <div
-                    style={{
-                      background: cd.color,
-                      color: getContrastingTextColor(cd.color),
-                      cursor: "pointer",
-                    }}
-                    className={styles.colorBlock}
-                  >
-                    <div
-                      style={{
-                        color: getContrastingBaseTextColor(cd.color),
-                        cursor: "pointer",
-                        display: "flex",
-                        alignItems: "center",
-                        padding: "10px",
-                        borderRadius: "4px",
-                        backgroundColor: cd.color,
-                      }}
-                      className={
-                        getContrastingBrightness(cd.color) === "120%"
-                          ? styles.swatchColorCopyLight
-                          : styles.swatchColorCopyDark
-                      }
-                    >
-                      {colorFormat === "hex"
-                        ? formattedColor(cd.color, colorFormat)
-                        : formattedColor(cd.color, colorFormat).replace(
-                            /[^0-9,#]/g,
-                            ""
-                          )}
-                      <ContentCopyIcon
-                        style={{ fontSize: "18px", marginLeft: "8px" }}
-                        className={styles.copyIcon}
-                      />
-                    </div>
-                  </div>
-                </CopyToClipboard>
-              ))}
+              <SortableWrapList
+                colorData={colorData}
+                setColorData={setColorData}
+                colorFormat={colorFormat}
+              />
             </div>
           </>
         )}
@@ -1572,6 +1518,17 @@ function PokemonData({
                 ? getContrastingTextColor(colorData[2].color)
                 : "white",
             }}
+            onClick={() => setTab("evolution")}
+          >
+            Evolutions
+          </div>
+          <div
+            className={styles.rightDrawerTab}
+            style={{
+              color: colorData.length
+                ? getContrastingTextColor(colorData[2].color)
+                : "white",
+            }}
             onClick={() => setTab("types")}
           >
             Type Matchups
@@ -1586,17 +1543,6 @@ function PokemonData({
             onClick={() => setTab("moves")}
           >
             Moves
-          </div>
-          <div
-            className={styles.rightDrawerTab}
-            style={{
-              color: colorData.length
-                ? getContrastingTextColor(colorData[2].color)
-                : "white",
-            }}
-            onClick={() => setTab("evolution")}
-          >
-            Evolutions
           </div>
         </div>
         <div>

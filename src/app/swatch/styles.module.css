@@ -1,0 +1,282 @@
+@import url('https://fonts.googleapis.com/css2?family=Inconsolata:wght@400..700&display=swap');
+
+.appHeader {
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.pokeball {
+  border: 0.20em solid #000;
+  border-radius: 100%;
+  box-sizing: content-box;
+  font-size: 16px;
+  height: 4em;
+  margin: 15px;
+  overflow: hidden;
+  position: relative;
+  width: 4em;
+  background: white;
+  cursor: pointer;
+
+  &>.top {
+    border-bottom: 0.25em solid #000;
+    box-sizing: inherit;
+    height: 0;
+    padding-bottom: 0.9375em;
+    padding-top: 0.9375em;
+    position: relative;
+  }
+
+  &>.button {
+    background: #fff;
+    border: 0.2em solid #000;
+    border-radius: 100%;
+    box-sizing: inherit;
+    height: 1.2em;
+    left: 50%;
+    position: absolute;
+    top: 50%;
+    width: 1.2em;
+    transform: translate(-50%, -50%);
+
+    &::before {
+      border: 0px solid #888;
+      border-radius: 100%;
+      content: "";
+      height: 0.5em;
+      left: 50%;
+      position: absolute;
+      top: 50%;
+      width: 0.5em;
+      transform: translate(-50%, -50%);
+    }
+  }
+}
+
+.pbHyper {
+  .top {
+    background: var(--color2);
+    overflow: hidden;
+
+    &::before {
+      border-left: 1.35em solid var(--color1);
+      border-right: 1.35em solid var(--color3);
+      box-sizing: inherit;
+      content: "";
+      height: 2em;
+      left: 0;
+      position: absolute;
+      top: 0;
+      width: 1.35em;
+    }
+  }
+}
+
+.swatchColorCopyLight:hover {
+  filter: brightness(120%)
+}
+
+.swatchColorCopyLight:active {
+  filter: brightness(130%)
+}
+
+.swatchColorCopyDark:hover {
+  filter: brightness(90%);
+}
+
+.swatchColorCopyDark:active {
+  filter: brightness(80%);
+}
+
+.settingsIconSwatchPage {
+  min-width: 40px !important;
+  height: 40px;
+  color: inherit !important;
+  font-size: 28px !important;
+  cursor: pointer;
+  margin-left: auto !important;
+  margin-right: 50px !important;
+  padding: 7px;
+  border-radius: 50% !important;
+  background-color: #ffa1a1 !important;
+  filter: brightness(100%);
+  transition: all 0.2s ease-in-out !important;
+}
+
+.settingsIconSwatchPage:hover {
+  filter: brightness(120%);
+  transition: all 0.2s ease-in-out;
+}
+
+@keyframes jump {
+  0% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-1.5px);
+  }
+
+  100% {
+    transform: translateY(0);
+  }
+}
+
+.footer {
+  width: 90%;
+  padding: 20px 60px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.pokemonSwatchContainer {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+}
+
+@media only screen and (max-width: 1096px) {
+  .appHeader {
+    flex-wrap: wrap;
+    margin-left: 0;
+  }
+
+  .pokeball:not(.loader):not(.swatchLoader) {
+    margin-left: 130px;
+  }
+
+  .settingsIconSwatchPage {
+    margin-right: 130px !important;
+  }
+}
+
+@media only screen and (max-width: 1000px) {
+  .pokemonSwatchContainer {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media only screen and (max-width: 766px) {
+  .pokeball:not(.loader):not(.swatchLoader) {
+    margin-left: 50px;
+  }
+
+  .settingsIconSwatchPage {
+    margin-right: 50px !important;
+  }
+}
+
+@media only screen and (max-width: 660px) {
+  .pokemonSwatchContainer {
+    grid-template-columns: repeat(1, 1fr);
+  }
+
+  .settingsIconSwatchPage {
+    margin-right: 7px !important;
+  }
+}
+
+@media only screen and (max-width: 550px) {
+  .pokeball:not(.loader):not(.swatchLoader) {
+    margin-left: 10px;
+    transform: scale(0.8);
+    margin-right: 7px;
+  }
+}
+
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  50% {
+    border-top: 8px solid var(--color2);
+    border-bottom: 8px solid var(--color2);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.loader,
+.swatchLoader {
+  animation: spin 1s ease-in-out infinite;
+  top: 50%;
+  left: 40%;
+  position: relative;
+  border: 8px solid var(--color1);
+  border-top: 8px solid var(--color3);
+  border-bottom: 8px solid var(--color3);
+  border-radius: 50%;
+}
+
+.buttonSwatchPage,
+.mobileButtonSwatchPage {
+  padding: 7px 10px;
+  border-radius: 4px;
+  margin-right: 20px;
+  font-size: 20px;
+  font-weight: bold;
+  text-decoration: none;
+  height: 21px;
+  display: flex;
+  align-items: center;
+  box-sizing: content-box;
+  color: black;
+}
+
+.randomizeButton {
+  border: 2px solid #ffa1a1;
+}
+
+.supportButton {
+  background-color: #ffa1a1;
+}
+
+.mobileButtonSwatchPage {
+  display: none;
+}
+
+@media only screen and (max-width: 1000px) {
+  .buttonSwatchPage {
+    display: none;
+  }
+
+  .mobileButtonSwatchPage {
+    display: flex;
+    padding: 0;
+    height: 40px;
+    width: 40px;
+    box-sizing: border-box;
+    align-items: center;
+    justify-content: center;
+    margin-right: 10px;
+  }
+}
+
+.swatchInfoContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+@media only screen and (max-width: 1460px) {
+  .footer {
+    margin: 0 auto;
+    width: 90%
+  }
+}
+
+@media only screen and (max-width: 660px) {
+  .footer {
+    padding: 20px 20px;
+    font-size: 12px;
+  }
+
+  .swatchInfoContainer {
+    flex-direction: column-reverse;
+  }
+}

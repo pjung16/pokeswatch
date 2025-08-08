@@ -421,15 +421,6 @@
   width: 600px;
 }
 
-.colorBlock {
-  font-weight: 700;
-  width: 160px;
-  height: 130px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
 .pokemonSpriteContainer {
   min-width: 415px;
 }
@@ -468,22 +459,6 @@
   transition: all 0.2s ease-in-out;
 }
 
-.swatchColorCopyLight:hover {
-  filter: brightness(120%)
-}
-
-.swatchColorCopyLight:active {
-  filter: brightness(130%)
-}
-
-.swatchColorCopyDark:hover {
-  filter: brightness(90%);
-}
-
-.swatchColorCopyDark:active {
-  filter: brightness(80%);
-}
-
 .settingsIconSwatchPage {
   min-width: 40px !important;
   height: 40px;
@@ -507,10 +482,6 @@
 .footer {
   width: calc(100vw - 400px);
   padding: 20px 60px;
-}
-
-.copyIcon {
-  opacity: 1;
 }
 
 @keyframes jump {
@@ -680,11 +651,6 @@
     padding: 0 50px;
   }
 
-  .colorBlock {
-    width: 120px;
-    height: 100px;
-  }
-
   .pokemonSpriteContainer {
     min-width: auto;
   }
@@ -699,10 +665,6 @@
 
   .settingsIcon {
     right: 15px;
-  }
-
-  .copyIcon {
-    display: none !important;
   }
 }
 
@@ -734,12 +696,6 @@
 
   .pokemonSprite {
     height: 170px;
-  }
-
-  .colorBlock {
-    width: 80px;
-    height: 70px;
-    font-size: 11px;
   }
 
   .settingsIcon {

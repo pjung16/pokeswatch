@@ -481,15 +481,12 @@ export const pokemonFormsToExclude = [
 ]
 
 export const navigateToRandomPokemon = (
-  autocompleteOptions: {
-    label: string
-    id: number
-  }[],
+  speciesMap: Record<string, string>,
   router: AppRouterInstance
 ) => {
   const randomNumber = Math.floor(Math.random() * 1025) + 1
-  const randomPokemon = autocompleteOptions.find((ao) => ao.id === randomNumber)
+  const randomPokemon = speciesMap[`${randomNumber}`]
   if (randomPokemon) {
-    router.push(`/pokemon/${randomPokemon.label}`)
+    router.push(`/pokemon/${randomPokemon}`)
   }
 }

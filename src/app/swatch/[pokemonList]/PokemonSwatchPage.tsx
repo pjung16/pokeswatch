@@ -11,7 +11,7 @@ import PokemonSwatch, { typedPokemonIdMap } from "./PokemonSwatch"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import * as R from "ramda"
 import { useParams, useRouter } from "next/navigation"
-import styles from "./styles.module.css"
+import styles from "../styles.module.css"
 import { useSwatchPageContext } from "../SwatchPageContext"
 
 const validPokemonSet = new Set([

@@ -27,9 +27,10 @@ import PokemonSpriteAnimator, {
 import animationMap from "../../animationMap.json"
 import ContentCopyIcon from "@mui/icons-material/ContentCopy"
 import CopyToClipboard from "@/app/components/CopyToClipboard"
-import styles from "./styles.module.css"
+import styles from "../styles.module.css"
 import classNames from "classnames"
 import Link from "next/link"
+import ColorDropdown from "@/app/components/ColorDropdown"
 
 type PokemonIdMap = Record<string, number>
 export const typedPokemonIdMap: PokemonIdMap = pokemonIdMap
@@ -66,9 +67,10 @@ const PokemonSwatch: React.FC<PokemonSwatchProps> = ({
     const img = new Image()
     imgRef.current = img
   }, [])
-  const [spriteImageUrl, setSpriteImageUrl] = React.useState("")
-  const [colors, setColors] = React.useState<TColorData[]>([])
-  const [isLoadingImage, setIsLoadingImage] = React.useState(true)
+  const [spriteImageUrl, setSpriteImageUrl] = useState("")
+  const [colors, setColors] = useState<TColorData[]>([])
+  const [displayedColors, setDisplayedColors] = useState<TColorData[]>([])
+  const [isLoadingImage, setIsLoadingImage] = useState(true)
   const [speciesData, setSpeciesData] = useState<PokemonSpecies | undefined>(
     undefined
   )
@@ -277,7 +279,7 @@ const PokemonSwatch: React.FC<PokemonSwatchProps> = ({
           : getMostUniqueColors(sortedColors, pokemonId)
       const colorsByLuminance = [...uniquelySortedColors].slice(0, 3)
       orderByLuminance(colorsByLuminance)
-      const orderedColors = colorsByLuminance.map((rgb) => {
+      const rgbColors: TColorData[] = uniquelySortedColors.map((rgb) => {
         return {
           color: rgbToHex(
             parseInt(rgb.color[0]),
@@ -287,7 +289,32 @@ const PokemonSwatch: React.FC<PokemonSwatchProps> = ({
           percentage: (rgb.count / totalPixels) * 100,
         }
       })
-      setColors(orderedColors)
+      setDisplayedColors([
+        ...colorsByLuminance.map((rgb) => {
+          return {
+            color: rgbToHex(
+              parseInt(rgb.color[0]),
+              parseInt(rgb.color[1]),
+              parseInt(rgb.color[2])
+            ),
+            percentage: (rgb.count / totalPixels) * 100,
+          }
+        }),
+      ])
+      setColors([
+        ...colorsByLuminance.map((rgb) => {
+          return {
+            color: rgbToHex(
+              parseInt(rgb.color[0]),
+              parseInt(rgb.color[1]),
+              parseInt(rgb.color[2])
+            ),
+            percentage: (rgb.count / totalPixels) * 100,
+          }
+        }),
+        ...rgbColors.slice(3),
+      ])
+      // setColors(orderedColors)
       window.setTimeout(() => setIsLoadingImage(false), 500)
     }
   }, [imgUrl, selectedPokemon, imgRef, pokemonId])
@@ -533,7 +560,7 @@ const PokemonSwatch: React.FC<PokemonSwatchProps> = ({
             />
           </Link>
         )}
-        {colors.map((color, index) => {
+        {displayedColors.map((color, index) => {
           const hexColor = color.color
           return (
             <div
@@ -547,45 +574,60 @@ const PokemonSwatch: React.FC<PokemonSwatchProps> = ({
                 minHeight: "428px",
               }}
             >
-              <CopyToClipboard
-                key={hexColor + pokemon}
-                text={
-                  colorFormat === "hex"
-                    ? formattedColor(hexColor, colorFormat)
-                    : formattedColor(hexColor, colorFormat).replace(
-                        /[^0-9,#]/g,
-                        ""
-                      )
-                }
-              >
-                <h3
-                  style={{
-                    marginBottom: "20px",
-                    color: getContrastingBaseTextColor(hexColor),
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    padding: "10px",
-                    borderRadius: "4px",
-                    backgroundColor: hexColor,
+              <div className={styles.swatchInfoContainer}>
+                <ColorDropdown
+                  colors={colors.map((c) => c.color)}
+                  selectedColor={displayedColors[index].color}
+                  onColorChange={(color) => {
+                    setDisplayedColors((prevColors) => {
+                      const newColors = [...prevColors]
+                      const newColorData = colors.find((c) => c.color === color)
+                      if (newColorData) {
+                        newColors[index] = newColorData
+                      }
+                      return newColors
+                    })
                   }}
-                  className={
-                    getContrastingBrightness(hexColor) === "120%"
-                      ? styles.swatchColorCopyLight
-                      : styles.swatchColorCopyDark
+                />
+                <CopyToClipboard
+                  key={hexColor + pokemon}
+                  text={
+                    colorFormat === "hex"
+                      ? formattedColor(hexColor, colorFormat)
+                      : formattedColor(hexColor, colorFormat).replace(
+                          /[^0-9,#]/g,
+                          ""
+                        )
                   }
                 >
-                  {colorFormat === "hex"
-                    ? formattedColor(hexColor, colorFormat)
-                    : formattedColor(hexColor, colorFormat).replace(
-                        /[^0-9,#]/g,
-                        ""
-                      )}
-                  <ContentCopyIcon
-                    style={{ fontSize: "18px", marginLeft: "8px" }}
-                  />
-                </h3>
-              </CopyToClipboard>
+                  <h3
+                    style={{
+                      color: getContrastingBaseTextColor(hexColor),
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      padding: "10px",
+                      borderRadius: "4px",
+                      backgroundColor: hexColor,
+                    }}
+                    className={
+                      getContrastingBrightness(hexColor) === "120%"
+                        ? styles.swatchColorCopyLight
+                        : styles.swatchColorCopyDark
+                    }
+                  >
+                    {colorFormat === "hex"
+                      ? formattedColor(hexColor, colorFormat)
+                      : formattedColor(hexColor, colorFormat).replace(
+                          /[^0-9,#]/g,
+                          ""
+                        )}
+                    <ContentCopyIcon
+                      style={{ fontSize: "18px", marginLeft: "8px" }}
+                    />
+                  </h3>
+                </CopyToClipboard>
+              </div>
             </div>
           )
         })}

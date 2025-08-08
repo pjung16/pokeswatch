@@ -3,17 +3,13 @@
 import { Button, Menu, MenuItem, ListSubheader } from "@mui/material"
 import classNames from "classnames"
 import React from "react"
-import styles from "./[pokemonList]/styles.module.css"
+import styles from "./styles.module.css"
 import { useRouter } from "next/navigation"
-import { speciesToOptions } from "../utils"
-import species from "../species.json"
 import SettingsIcon from "@mui/icons-material/Settings"
 import ShuffleIcon from "@mui/icons-material/Shuffle"
 import { SwatchPageProvider, useSwatchPageContext } from "./SwatchPageContext"
 import Link from "next/link"
 import PokeballAndLogo from "../components/PokeballAndLogo"
-
-const autocompleteOptions = speciesToOptions(species)
 
 export default function SwatchLayout({
   children,
@@ -31,16 +27,6 @@ function SwatchInnerLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const { colorFormat, setColorFormat, showAnimations, setShowAnimations } =
     useSwatchPageContext()
-
-  const chooseRandomPokemon = () => {
-    const randomNumber = Math.floor(Math.random() * 1025) + 1
-    const randomPokemon = autocompleteOptions.find(
-      (ao) => ao.id === randomNumber
-    )
-    if (randomPokemon) {
-      router.push(`/pokemon/${randomPokemon.label}`)
-    }
-  }
 
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null)
   const open = Boolean(anchorEl)

@@ -76,22 +76,26 @@
 }
 
 @media only screen and (max-width: 1096px) {
-  .pokeball:not(.loader):not(.swatchLoader):not(.homepagepokeball) {
+  .pokeball:not(.loader):not(.swatchLoader) {
     margin-left: 130px;
   }
 }
 
 @media only screen and (max-width: 766px) {
-  .pokeball:not(.loader):not(.swatchLoader):not(.homepagepokeball) {
+  .pokeball:not(.loader):not(.swatchLoader) {
     margin-left: 50px;
   }
 }
 
 @media only screen and (max-width: 550px) {
-  .pokeball:not(.loader):not(.swatchLoader):not(.homepagepokeball) {
+  .pokeball:not(.loader):not(.swatchLoader) {
     margin-left: 10px;
     transform: scale(0.8);
     margin-right: 7px;
+  }
+
+  .pokeball.homepagepokeball {
+    margin-left: 10px;
   }
 
   .pokeballandLogoContainer {

@@ -1,0 +1,47 @@
+.colorBlock {
+  font-weight: 700;
+  width: 160px;
+  height: 130px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.swatchColorCopyLight:hover {
+  filter: brightness(120%)
+}
+
+.swatchColorCopyLight:active {
+  filter: brightness(130%)
+}
+
+.swatchColorCopyDark:hover {
+  filter: brightness(90%);
+}
+
+.swatchColorCopyDark:active {
+  filter: brightness(80%);
+}
+
+.copyIcon {
+  opacity: 1;
+}
+
+@media only screen and (max-width: 766px) {
+  .colorBlock {
+    width: 120px;
+    height: 100px;
+  }
+
+  .copyIcon {
+    display: none !important;
+  }
+}
+
+@media only screen and (max-width: 550px) {
+  .colorBlock {
+    width: 80px;
+    height: 70px;
+    font-size: 11px;
+  }
+}

@@ -3,29 +3,19 @@
 import React from "react"
 import styles from "./styles.module.css"
 import classNames from "classnames"
-import { navigateToRandomPokemon, speciesToOptions } from "@/app/utils"
-import species from "../../species.json"
+import { navigateToRandomPokemon } from "@/app/utils"
+import speciesMap from "../../speciesMap.json"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 
-const autocompleteOptions = speciesToOptions(species)
-
-interface IProps {
-  isHomePage?: boolean
-}
-
-const PokeballAndLogo = ({ isHomePage }: IProps) => {
+const PokeballAndLogo = () => {
   const router = useRouter()
 
   return (
     <div className={styles.pokeballandLogoContainer}>
       <div
-        className={classNames(
-          styles.pokeball,
-          styles.pbHyper,
-          isHomePage && styles.homepagepokeball
-        )}
-        onClick={() => navigateToRandomPokemon(autocompleteOptions, router)}
+        className={classNames(styles.pokeball, styles.pbHyper)}
+        onClick={() => navigateToRandomPokemon(speciesMap, router)}
       >
         <div className={styles.top}></div>
         <div className={styles.button} />
