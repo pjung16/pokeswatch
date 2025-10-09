@@ -301,11 +301,11 @@ function GameContent() {
 
         // Add hint based on attempt number
         const newHints = [...hints]
-        if (attempts === 0 && pokemonData) {
+        if (attempts === 1 && pokemonData) {
           newHints.push(
             `Type: ${pokemonData.types.map((t) => t.type.name).join(", ")}`
           )
-        } else if (attempts === 2 && pokemonData) {
+        } else if (attempts === 3 && pokemonData) {
           newHints.push(
             `Generation: ${
               pokemonData.id <= 151
@@ -500,8 +500,7 @@ function GameContent() {
               </div>
               <div className={styles.gameState}>
                 {gameState === "won" && "🎉 Congratulations! You guessed it!"}
-                {gameState === "lost" &&
-                  "😞 Game Over! The answer was " + currentPokemon?.label}
+                {gameState === "lost" && "😞 Game Over! Try again next time!"}
               </div>
             </div>
 
@@ -510,7 +509,7 @@ function GameContent() {
                 <h3
                   style={{
                     color: getContrastingTextColor(
-                      colorData.at(1)?.color ?? "#7A7D7D"
+                      colorData.at(2)?.color ?? "#7A7D7D"
                     ),
                   }}
                 >
@@ -559,17 +558,34 @@ function GameContent() {
                 <div className={styles.pokemonDisplay}>
                   <div
                     style={{
-                      background: getPokemonIcon(currentPokemon?.label || ""),
-                      width: "40px",
-                      height: "30px",
-                      imageRendering: "pixelated",
-                      transform: "scale(2)",
-                      margin: "0 auto",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0px",
+                      marginRight: "-1px",
                     }}
-                  />
-                  <h2>
-                    #{currentPokemon?.id} {currentPokemon?.label}
-                  </h2>
+                  >
+                    <div
+                      style={{
+                        background: getPokemonIcon(
+                          currentPokemon?.label || "egg"
+                        ),
+                        width: "40px",
+                        height: "30px",
+                        imageRendering: "pixelated",
+                        transform: "scale(1.2)",
+                        marginTop: !currentPokemon ? "-12px" : "0px",
+                      }}
+                    />
+                    <div
+                      className={styles.pokemonDexNumber}
+                      style={{ marginRight: "2px" }}
+                    >
+                      #{currentPokemon?.id}
+                    </div>
+                    <div className={styles.revealedPokemonName}>
+                      {currentPokemon?.label}
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
@@ -578,12 +594,14 @@ function GameContent() {
               <div className={styles.pokemonImageContainer}>
                 {(gameState === "won" || gameState === "lost") &&
                   spriteImageUrl && (
-                    <img
-                      src={spriteImageUrl}
-                      alt="Pokémon sprite"
-                      className={styles.pokemonSprite}
-                      crossOrigin="anonymous"
-                    />
+                    <a href={`/pokemon/${currentPokemon?.label}`}>
+                      <img
+                        src={spriteImageUrl}
+                        alt="Pokémon sprite"
+                        className={styles.pokemonSprite}
+                        crossOrigin="anonymous"
+                      />
+                    </a>
                   )}
                 {gameState === "playing" && (
                   <div className={styles.hiddenPokemon}>
@@ -591,7 +609,7 @@ function GameContent() {
                       className={styles.questionMark}
                       style={{
                         color: getContrastingTextColor(
-                          colorData.at(1)?.color ?? "#7A7D7D"
+                          colorData.at(0)?.color ?? "#7A7D7D"
                         ),
                       }}
                     >
@@ -601,7 +619,7 @@ function GameContent() {
                       className={styles.hiddenText}
                       style={{
                         color: getContrastingTextColor(
-                          colorData.at(1)?.color ?? "#7A7D7D"
+                          colorData.at(0)?.color ?? "#7A7D7D"
                         ),
                       }}
                     >

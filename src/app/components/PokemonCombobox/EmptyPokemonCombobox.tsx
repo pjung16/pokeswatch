@@ -110,7 +110,6 @@ export const EmptyPokemonCombobox: React.FC<PokemonComboboxProps> = ({}) => {
                   >
                     <div
                       style={{
-                        // random string here to get question mark icon
                         background: getPokemonIcon("egg"),
                         width: "40px",
                         height: "30px",

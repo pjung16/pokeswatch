@@ -22,6 +22,10 @@ export const GamePokemonCombobox: React.FC<GamePokemonComboboxProps> = ({
   disabled = false,
 }) => {
   const [optionsOpen, setOptionsOpen] = useState(false)
+  const [currentGuessPokemon, setCurrentGuessPokemon] = useState<{
+    label: string
+    id: number
+  } | null>(null)
 
   return (
     <div className={styles.emptyComboboxContainer} style={{ width: "100%" }}>
@@ -43,6 +47,7 @@ export const GamePokemonCombobox: React.FC<GamePokemonComboboxProps> = ({
         onChange={(event, value) => {
           if (value) {
             onGuess(value.label)
+            setCurrentGuessPokemon(value)
           }
         }}
         slotProps={{
@@ -115,15 +120,24 @@ export const GamePokemonCombobox: React.FC<GamePokemonComboboxProps> = ({
                 >
                   <div
                     style={{
-                      background: getPokemonIcon("egg"),
+                      background: getPokemonIcon(
+                        currentGuessPokemon?.label || "egg"
+                      ),
                       width: "40px",
                       height: "30px",
                       imageRendering: "pixelated",
                       transform: "scale(1.2)",
-                      marginRight: "4px",
-                      marginTop: "-12px",
+                      marginTop: !currentGuessPokemon ? "-12px" : "0px",
                     }}
                   />
+                  {currentGuessPokemon && (
+                    <div
+                      className={styles.pokemonDexNumber}
+                      style={{ marginRight: "2px" }}
+                    >
+                      #{currentGuessPokemon?.id}
+                    </div>
+                  )}
                 </div>
               ),
             }}
