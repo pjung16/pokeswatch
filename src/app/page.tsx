@@ -62,6 +62,9 @@ export default function Home() {
           <Link href="/swatch" className={styles.button}>
             Create Swatch
           </Link>
+          <Link href="/game" className={styles.button}>
+            Color Guessing Game
+          </Link>
         </div>
       </main>
     </div>
