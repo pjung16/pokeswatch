@@ -174,13 +174,18 @@ function PokemonData({
   }
 
   const getPokemonEvolution = (evolutionId: number | undefined) => {
-    return api.evolution
-      .getEvolutionChainById(evolutionId ?? 1)
-      .then((data) => {
-        setPokemonEvolutionData(data)
-        return data
-      })
-      .catch((error) => console.error(error))
+    if (!evolutionId) {
+      setPokemonEvolutionData(undefined)
+      return Promise.resolve(undefined)
+    } else {
+      return api.evolution
+        .getEvolutionChainById(evolutionId)
+        .then((data) => {
+          setPokemonEvolutionData(data)
+          return data
+        })
+        .catch((error) => console.error(error))
+    }
   }
 
   const getPokemonAbility = (abilityName: string) => {
@@ -243,10 +248,13 @@ function PokemonData({
 
   const { isLoading: evolutionIsLoading } = useQuery({
     queryKey: ["getPokemonEvolution", speciesData],
-    queryFn: () =>
-      getPokemonEvolution(
-        parseInt(speciesData?.evolution_chain.url.split("/").at(-2) ?? "1")
-      ),
+    enabled: !!speciesData,
+    queryFn: () => {
+      const evolutionId = speciesData?.evolution_chain.url.split("/").at(-2)
+      if (evolutionId) {
+        return getPokemonEvolution(parseInt(evolutionId))
+      }
+    },
     refetchOnWindowFocus: false,
   })
 

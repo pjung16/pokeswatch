@@ -5,6 +5,7 @@ import { TPokemon } from "./types"
 import { hexToRgb } from "@mui/material"
 import { hexToHSL, hexToHSV } from "./color"
 import { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime"
+import speciesMap from "./speciesMap.json"
 
 const getPokemonIconNum = (pokemon: string | number) => {
   let num = 0
@@ -489,4 +490,12 @@ export const navigateToRandomPokemon = (
   if (randomPokemon) {
     router.push(`/pokemon/${randomPokemon}`)
   }
+}
+
+export const getRandomPokemonURL = () => {
+  const randomNumber = Math.floor(Math.random() * 1025) + 1
+  const randomPokemon = (speciesMap as Record<string, string>)[
+    `${randomNumber}`
+  ]
+  return `/pokemon/${randomPokemon}`
 }

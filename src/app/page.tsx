@@ -2,8 +2,7 @@
 import styles from "./page.module.css"
 import PokeballAndLogo from "./components/PokeballAndLogo"
 import { EmptyPokemonCombobox } from "./components/PokemonCombobox/EmptyPokemonCombobox"
-import { getPokemonIcon, navigateToRandomPokemon } from "./utils"
-import speciesMap from "./speciesMap.json"
+import { getPokemonIcon } from "./utils"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useWindowDimensions } from "./hooks"
@@ -57,12 +56,9 @@ export default function Home() {
         </div>
         <EmptyPokemonCombobox />
         <div className={styles.buttonsContainer}>
-          <div
-            onClick={() => navigateToRandomPokemon(speciesMap, router)}
-            className={styles.button}
-          >
+          <Link href="/pokemon" className={styles.button}>
             Random Pokemon
-          </div>
+          </Link>
           <Link href="/swatch" className={styles.button}>
             Create Swatch
           </Link>
