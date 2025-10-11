@@ -6,7 +6,6 @@ import { MainClient, Pokemon } from "pokenode-ts"
 import {
   formattedColor,
   getPokemonIcon,
-  getPokemonSpriteURL,
   pokemonNameToQueryableName,
   rgbToHex,
   speciesToOptions,
@@ -29,15 +28,30 @@ import { TColorData, TColorFormat, TPokemon } from "../types"
 import species from "../species.json"
 import styles from "./styles.module.css"
 
-// Generate a daily random Pokemon based on the current date
+// Simple Linear Congruential Generator for better randomization
+const seededRandom = (seed: number) => {
+  const a = 1664525
+  const c = 1013904223
+  const m = Math.pow(2, 32)
+
+  return () => {
+    seed = (a * seed + c) % m
+    return seed / m
+  }
+}
+
+// Generate a daily random Pokemon based on the current UTC date
 const getDailyPokemon = (): { label: string; id: number } => {
   const today = new Date()
   const seed =
-    today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate()
+    today.getUTCFullYear() * 10000 +
+    (today.getUTCMonth() + 1) * 100 +
+    today.getUTCDate()
 
-  // Use the date as a seed for consistent daily results
+  // Use a better pseudo-random number generator
   const speciesEntries = Object.entries(species)
-  const randomIndex = seed % speciesEntries.length
+  const random = seededRandom(seed)
+  const randomIndex = Math.floor(random() * speciesEntries.length)
   const [pokemonName, pokemonId] = speciesEntries[randomIndex]
 
   return {
@@ -90,10 +104,13 @@ function GameContent() {
     const img = new Image()
     imgRef.current = img
 
-    // Check if daily game was completed today
-    const today = new Date().toDateString()
+    // Check if daily game was completed today (UTC)
+    const today = new Date()
+    const todayUTC = `${today.getUTCFullYear()}-${String(
+      today.getUTCMonth() + 1
+    ).padStart(2, "0")}-${String(today.getUTCDate()).padStart(2, "0")}`
     const completedDate = localStorage.getItem("dailyGameCompleted")
-    if (completedDate === today) {
+    if (completedDate === todayUTC) {
       setDailyCompleted(true)
     }
 
@@ -288,8 +305,11 @@ function GameContent() {
         setGameState("won")
         // Mark daily game as completed if in daily mode
         if (gameMode === "daily") {
-          const today = new Date().toDateString()
-          localStorage.setItem("dailyGameCompleted", today)
+          const today = new Date()
+          const todayUTC = `${today.getUTCFullYear()}-${String(
+            today.getUTCMonth() + 1
+          ).padStart(2, "0")}-${String(today.getUTCDate()).padStart(2, "0")}`
+          localStorage.setItem("dailyGameCompleted", todayUTC)
           setDailyCompleted(true)
         }
       } else if (attempts + 1 >= maxAttempts) {
