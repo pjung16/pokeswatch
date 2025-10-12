@@ -28,31 +28,44 @@ import { TColorData, TColorFormat, TPokemon } from "../types"
 import species from "../species.json"
 import styles from "./styles.module.css"
 
-// Simple Linear Congruential Generator for better randomization
-const seededRandom = (seed: number) => {
-  const a = 1664525
-  const c = 1013904223
-  const m = Math.pow(2, 32)
-
-  return () => {
-    seed = (a * seed + c) % m
-    return seed / m
+// More sophisticated randomization using multiple hash rounds
+const hashString = (str: string): number => {
+  let hash = 0
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i)
+    hash = (hash << 5) - hash + char
+    hash = hash & hash // Convert to 32-bit integer
   }
+  return Math.abs(hash)
 }
 
 // Generate a daily random Pokemon based on the current UTC date
 const getDailyPokemon = (): { label: string; id: number } => {
   const today = new Date()
-  const seed =
-    today.getUTCFullYear() * 10000 +
-    (today.getUTCMonth() + 1) * 100 +
-    today.getUTCDate()
+  const dateString = `${today.getUTCFullYear()}-${String(
+    today.getUTCMonth() + 1
+  ).padStart(2, "0")}-${String(today.getUTCDate()).padStart(2, "0")}`
 
-  // Use a better pseudo-random number generator
+  // Create a more complex seed by hashing the date string multiple times
+  let seed = hashString(dateString)
+  seed = hashString(seed.toString() + "pokemon")
+  seed = hashString(seed.toString() + "daily")
+
+  // Use the seed to generate a random index with better distribution
   const speciesEntries = Object.entries(species)
-  const random = seededRandom(seed)
-  const randomIndex = Math.floor(random() * speciesEntries.length)
-  const [pokemonName, pokemonId] = speciesEntries[randomIndex]
+  const randomIndex = seed % speciesEntries.length
+
+  // Apply additional randomization by shuffling based on the seed
+  const shuffledEntries = [...speciesEntries]
+  for (let i = shuffledEntries.length - 1; i > 0; i--) {
+    const j = (seed + i * 2654435761) % (i + 1) // Use a different multiplier for each position
+    ;[shuffledEntries[i], shuffledEntries[j]] = [
+      shuffledEntries[j],
+      shuffledEntries[i],
+    ]
+  }
+
+  const [pokemonName, pokemonId] = shuffledEntries[randomIndex]
 
   return {
     label: pokemonName,
