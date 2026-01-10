@@ -32,6 +32,7 @@ const getPokemonIconNum = (pokemon: string | number) => {
 
 export const getPokemonIcon = (pokemon: string | number) => {
   const num = getPokemonIconNum(pokemon)
+  console.log(num)
 
   const top = Math.floor(num / 12) * 30
   const left = (num % 12) * 40
@@ -479,6 +480,56 @@ export const pokemonFormsToExclude = [
   "spewpa-fancy",
   "spewpa-poke-ball",
   "rockruff-own-tempo",
+
+  // Megas with no sprites yet
+  // remove these when we have the sprites
+  "clefable-mega",
+  "starmie-mega",
+  "meganium-mega",
+  "feraligatr-mega",
+  "skarmory-mega",
+  "froslass-mega",
+  "emboar-mega",
+  "excadrill-mega",
+  "scolipede-mega",
+  "scrafty-mega",
+  "eelektross-mega",
+  "chandelure-mega",
+  "chesnaught-mega",
+  "delphox-mega",
+  "greninja-mega",
+  "pyroar-mega",
+  "floette-mega",
+  "malamar-mega",
+  "barbaracle-mega",
+  "dragalge-mega",
+  "hawlucha-mega",
+  "zygardemega",
+  "drampa-mega",
+  "falinks-mega",
+  "raichu-mega-x",
+  "raichu-mega-y",
+  "chimecho-mega",
+  "absol-mega-z",
+  "staraptor-mega",
+  "garchomp-mega-z",
+  "lucario-mega-z",
+  "heatran-mega",
+  "darkrai-mega",
+  "golurk-mega",
+  "meowstic-m-mega",
+  "meowstic-f-mega",
+  "crabominable-mega",
+  "golisopod-mega",
+  "magearna-mega",
+  "magearna-original-mega",
+  "zeraora-mega",
+  "scovillain-mega",
+  "glimmora-mega",
+  "tatsugiri-curly-mega",
+  "baxcalibur-mega",
+  "tatsugiri-droopy-mega",
+  "tatsugiri-stretchy-mega",
 ]
 
 export const navigateToRandomPokemon = (
