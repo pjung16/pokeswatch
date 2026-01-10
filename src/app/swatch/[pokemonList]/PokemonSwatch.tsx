@@ -111,7 +111,7 @@ const PokemonSwatch: React.FC<PokemonSwatchProps> = ({
   )
   const isDefaultForm = pokemonData?.is_default
   const pokeApiUrl =
-    "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@613b7d0/sprites/pokemon/" +
+    "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@cb66bc8/sprites/pokemon/" +
     // (showShinySprite ? "shiny/" : "") +
     pokemonData?.id +
     (isInnateForm
@@ -142,7 +142,7 @@ const PokemonSwatch: React.FC<PokemonSwatchProps> = ({
       setIsLoadingImage(true)
       if (!imgRef.current) return
       const newUrl =
-        "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@613b7d0/sprites/pokemon/" +
+        "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@cb66bc8/sprites/pokemon/" +
         pokemonId +
         ".png"
       imgRef.current.src = newUrl

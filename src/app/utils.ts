@@ -307,7 +307,7 @@ export const getPokemonSpriteURL = (
       case "zygarde-50-power-construct":
         return pokeApiURL
       case "zygarde-10":
-        return "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@613b7d0/sprites/pokemon/10118.png"
+        return "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@cb66bc8/sprites/pokemon/10118.png"
       default:
         return pokeRogueURL
     }

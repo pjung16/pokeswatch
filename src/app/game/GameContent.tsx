@@ -27,6 +27,7 @@ import CopyToClipboard from "../components/CopyToClipboard"
 import { TColorData, TColorFormat, TPokemon } from "../types"
 import species from "../species.json"
 import styles from "./styles.module.css"
+import Footer from "../components/Footer"
 
 // More sophisticated randomization using multiple hash rounds
 const hashString = (str: string): number => {
@@ -687,6 +688,7 @@ function GameContent() {
           </>
         )}
       </div>
+      <Footer shouldCenter />
     </div>
   )
 }

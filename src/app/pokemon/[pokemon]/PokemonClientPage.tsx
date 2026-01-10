@@ -90,6 +90,7 @@ import { usePokemonPageContext } from "../context/PokemonPageContext"
 import ListboxComponent from "@/app/components/VirtualizedListboxComponent"
 import PokeballAndLogo from "@/app/components/PokeballAndLogo"
 import SortableWrapList from "@/app/components/SortableWrapList"
+import Footer from "@/app/components/Footer"
 // Create a client
 const queryClient = new QueryClient()
 
@@ -321,11 +322,12 @@ function PokemonData({
       setIsAbsoluteLoading(true)
       if (pokemonForm) {
         const imgUrl =
-          "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@613b7d0/sprites/pokemon/" +
+          "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@cb66bc8/sprites/pokemon/" +
           (showShinySprite ? "shiny/" : "") +
           pokemonData?.id +
           pokemonForm?.replace(pokemonData?.name ?? "", "") +
           ".png"
+        console.log(imgUrl)
         const imgUrl2 = `https://cdn.jsdelivr.net/gh/pagefaultgames/pokerogue@02cac77/public/images/pokemon/${animationMapKey}.png`
         if (imgRef.current) {
           imgRef.current.src = showShinySprite
@@ -1049,7 +1051,7 @@ function PokemonData({
                     if (showShinySprite) {
                       // if (pokemonForm) {
                       //   imgRef.current.src =
-                      //     "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@613b7d0/sprites/pokemon/" +
+                      //     "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@cb66bc8/sprites/pokemon/" +
                       //     pokemonData?.id +
                       //     pokemonForm?.replace(pokemonData?.name ?? "", "") +
                       //     ".png"
@@ -1072,7 +1074,7 @@ function PokemonData({
                     } else {
                       // if (pokemonForm) {
                       //   const imgUrl =
-                      //     "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@613b7d0/sprites/pokemon/shiny/" +
+                      //     "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@cb66bc8/sprites/pokemon/shiny/" +
                       //     pokemonData?.id +
                       //     pokemonForm?.replace(pokemonData?.name ?? "", "") +
                       //     ".png"
@@ -1576,22 +1578,7 @@ function PokemonData({
           )}
         </div>
       </div>
-      <footer className={styles.footer}>
-        <div>
-          Disclaimer: This is a fan-made project and is not affiliated with,
-          endorsed, sponsored, or specifically approved by Nintendo, Game Freak,
-          or The Pokémon Company. All Pokémon content, including names, images,
-          and other associated media, are the property of their respective
-          owners.
-        </div>
-        <div>
-          Credits: Portions of this website utilize assets and code from the
-          PokéRogue project, which is licensed under the AGPL-3.0 License. In
-          accordance with this license, the source code for this website is
-          available at: https://github.com/pjung16/pokeswatch
-        </div>
-        <div>© 2025 PokeSwatch. All rights reserved.</div>
-      </footer>
+      <Footer />
     </div>
   )
 }

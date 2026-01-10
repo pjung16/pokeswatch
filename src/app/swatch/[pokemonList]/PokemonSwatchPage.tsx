@@ -13,6 +13,7 @@ import * as R from "ramda"
 import { useParams, useRouter } from "next/navigation"
 import styles from "../styles.module.css"
 import { useSwatchPageContext } from "../SwatchPageContext"
+import Footer from "@/app/components/Footer"
 
 const validPokemonSet = new Set([
   ...Object.keys(BattlePokemonIconIndexes),
@@ -98,22 +99,7 @@ function PokemonTeamPage() {
           />
         ))}
       </div>
-      <footer className={styles.footer}>
-        <div>
-          Disclaimer: This is a fan-made project and is not affiliated with,
-          endorsed, sponsored, or specifically approved by Nintendo, Game Freak,
-          or The Pokémon Company. All Pokémon content, including names, images,
-          and other associated media, are the property of their respective
-          owners.
-        </div>
-        <div>
-          Credits: Portions of this website utilize assets and code from the
-          PokéRogue project, which is licensed under the AGPL-3.0 License. In
-          accordance with this license, the source code for this website is
-          available at: https://github.com/pjung16/pokeswatch
-        </div>
-        <div>© 2025 PokeSwatch. All rights reserved.</div>
-      </footer>
+      <Footer shouldCenter />
     </div>
   )
 }

@@ -10,6 +10,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const staticRoutes = [
     { url: `${baseUrl}/`, lastModified: new Date() },
     { url: `${baseUrl}/swatch`, lastModified: new Date() },
+    { url: `${baseUrl}/game`, lastModified: new Date() },
   ]
 
   const dynamicPokemonRoutes = allPokemonNames.map((name) => ({
