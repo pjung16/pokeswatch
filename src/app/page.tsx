@@ -65,6 +65,9 @@ export default function Home() {
           <Link href="/game" className={styles.button}>
             Color Guessing Game
           </Link>
+          <Link href="/color-swapper" className={styles.button}>
+            Color Swapper
+          </Link>
         </div>
       </main>
     </div>
