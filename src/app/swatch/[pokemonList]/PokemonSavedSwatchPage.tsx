@@ -38,14 +38,28 @@ export default function PokemonSwatchPage() {
 }
 
 function PokemonTeamPage() {
-  const { pokemonList } = useParams<{ pokemonList: string }>()
-  const parsedPokemon = useMemo(
-    () =>
-      pokemonList ? parsePokemonUrlPath(pokemonList, validPokemonSet) : [],
-    [pokemonList]
-  )
+  const { pokemonList: swatchId } = useParams<{ pokemonList: string }>()
   const router = useRouter()
   const { colorFormat, showAnimations } = useSwatchPageContext()
+
+  const [swatch, setSwatch] = useState<ISwatch | null>(null)
+
+  const fetchSwatch = useCallback(async () => {
+    api.get<ISwatch>(`/swatches/${swatchId}`)
+    .then((response) => {
+      setSwatch(response.data)
+    })
+  }, [swatchId])
+
+  useEffect(() => {
+    if (swatchId) {
+      fetchSwatch()
+    }
+  }, [swatchId, fetchSwatch])
+
+  const parsedPokemon = useMemo(() => {
+    return swatch?.pokemon ? parsePokemonUrlPath(swatch.pokemon, validPokemonSet) : []
+  }, [swatch])
 
   const updatePokemonRoute = (
     currentUrl: string,
@@ -55,15 +69,6 @@ function PokemonTeamPage() {
     const newPokemonList = currentUrl?.replace(oldPokemonName, newPokemonName)
     window.history.pushState({}, "", `${newPokemonList}`)
   }
-
-  useEffect(() => {
-    const pokemonWithQueryableNames = parsedPokemon.map((p) =>
-      pokemonNameToQueryableName(p)
-    )
-    if (!R.equals(pokemonWithQueryableNames, parsedPokemon)) {
-      router.push(`/swatch/${pokemonWithQueryableNames.join("-")}`)
-    }
-  }, [router.push, parsedPokemon])
 
   const [swatches, setSwatches] = useState<ISwatch[]>([])
   const [selectedSwatch, setSelectedSwatch] = useState<string>("")
@@ -81,14 +86,14 @@ function PokemonTeamPage() {
 
   const saveSwatch = useCallback(async () => {
     api.post<ISwatch>('/swatches', {
-      pokemon: pokemonList,
+      pokemon: swatch?.pokemon,
       // swatchName: selectedSwatch,
     })
     .then((response) => {
       console.log(response.data)
       fetchSwatches()
     })
-  }, [pokemonList, selectedSwatch])
+  }, [swatch?.pokemon, selectedSwatch])
 
   const onSwatchSelect = useCallback((e: SelectChangeEvent<string>) => {
     setSelectedSwatch(e.target.value)
@@ -140,13 +145,13 @@ function PokemonTeamPage() {
 
   return (
     <div>
-      <div style={{ display: "flex", gap: "12px", padding: "0 70px" }}>
+      <div style={{ display: "flex", gap: "12px", padding: "0 70px", paddingBottom: "24px" }}>
         <FormControl fullWidth>
           <InputLabel id="swatch">Swatch</InputLabel>
           <Select
             labelId="demo-simple-select-label"
             id="demo-simple-select"
-            value={selectedSwatch}
+            value={swatchId}
             label="Age"
             onChange={onSwatchSelect}
           >

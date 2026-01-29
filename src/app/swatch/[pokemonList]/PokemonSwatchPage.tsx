@@ -122,7 +122,7 @@ function PokemonTeamPage() {
     setSelectedSwatch(e.target.value)
     const swatch = swatches.find((swatch) => swatch.id === e.target.value)
     if (swatch) {
-      router.push(`/swatch/${swatch.pokemon}`)
+      router.push(`/swatch/${swatch.id}`)
     }
   }, [swatches, router.push])
 
@@ -164,11 +164,11 @@ function PokemonTeamPage() {
     }
   }, [swatches])
 
-  console.log(savedSwatchPokemonAndColors)
+  console.log("selectedSwatch", selectedSwatch)
 
   return (
     <div>
-      <div style={{ display: "flex", gap: "12px", padding: "0 70px" }}>
+      <div style={{ display: "flex", gap: "12px", padding: "0 70px", marginBottom: "24px" }}>
         <FormControl fullWidth>
           <InputLabel id="swatch">Swatch</InputLabel>
           <Select

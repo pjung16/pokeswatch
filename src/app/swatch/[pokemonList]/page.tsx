@@ -4,6 +4,7 @@ import PokemonSwatchPage from "./PokemonSwatchPage"
 import { Metadata } from "next"
 import { SwatchPageProvider } from "../SwatchPageContext"
 import { isPrismaCuid } from "@/app/utils"
+import PokemonSavedSwatchPage from "./PokemonSavedSwatchPage"
 
 export const metadata: Metadata = {
   robots: "noindex",
@@ -16,10 +17,9 @@ export default async function Page({
 }) {
   const {pokemonList} = await params
   const isCuid = isPrismaCuid(pokemonList)
-  console.log(isCuid)
-  console.log(pokemonList)
+
   if (isCuid) {
-    return <div>Valid CUID</div>
+    return <PokemonSavedSwatchPage />
   }
   return (
     <>

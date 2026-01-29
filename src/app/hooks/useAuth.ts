@@ -1,7 +1,7 @@
 // hooks/useAuth.ts
 import { useState, useEffect, useCallback } from 'react';
 
-const API_URL = process.env.BACKEND_API_URL || 'http://localhost:3002';
+const API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL || 'http://localhost:3002';
 
 interface User {
   id: string;
