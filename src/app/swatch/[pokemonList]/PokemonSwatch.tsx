@@ -1,22 +1,17 @@
 "use client"
 
-import React, { useEffect, useMemo, useRef, useState } from "react"
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import pokemonIdMap from "../../pokemon-id-map-object.json"
 import { cropWhitespace } from "../../image"
 import {
   getContrastingBaseTextColor,
   getContrastingBrightness,
-  getMostUniqueColors,
-  orderByLuminance,
 } from "../../color"
 import { TColorData, TColorFormat, TPokemonAnimationKey } from "../../types"
 import {
   formattedColor,
-  getPokemonSpriteURL,
-  getShinyPokemonSprites,
   pokemonFormsToExclude,
   pokemonNameToQueryableName,
-  rgbToHex,
 } from "../../utils"
 import { MainClient, Pokemon, PokemonSpecies } from "pokenode-ts"
 import { useQuery } from "@tanstack/react-query"
@@ -31,6 +26,9 @@ import styles from "../styles.module.css"
 import classNames from "classnames"
 import Link from "next/link"
 import ColorDropdown from "@/app/components/ColorDropdown"
+import axios from "axios"
+import { IPokemonColorsResponseData } from "@/types/PokemonColorResponseData"
+import api from "@/app/api/api"
 
 type PokemonIdMap = Record<string, number>
 export const typedPokemonIdMap: PokemonIdMap = pokemonIdMap
@@ -105,232 +103,66 @@ const PokemonSwatch: React.FC<PokemonSwatchProps> = ({
       (selectedPokemon ?? pokemonFromInput.label) as TPokemonAnimationKey
     ]
 
-  // form that doesn't have a separate pokemon entry in the API
-  const isInnateForm = pokemonData?.forms.find(
-    (form, idx) => form.name === selectedPokemon && idx > 0
-  )
-  const isDefaultForm = pokemonData?.is_default
-  const pokeApiUrl =
-    "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@cb66bc8/sprites/pokemon/" +
-    // (showShinySprite ? "shiny/" : "") +
-    pokemonData?.id +
-    (isInnateForm
-      ? selectedPokemon?.replace(pokemonData?.name ?? "", "")
-      : selectedPokemon) +
-    ".png"
-  const pokeRogueUrl = `https://cdn.jsdelivr.net/gh/pagefaultgames/pokerogue@02cac77/public/images/pokemon/${animationMapKey}.png`
-  const imgUrl = pokemonData
-    ? isDefaultForm && !isInnateForm && pokemonData.sprites.front_default
-      ? pokeApiUrl
-      : getPokemonSpriteURL(
-          selectedPokemon ?? pokemonData?.name ?? pokemon,
-          parseInt(`${pokemonFromInput.id}`),
-          pokeApiUrl,
-          pokeRogueUrl
-        )
-    : undefined
+  const [pokemonColorData, setPokemonColorData] = useState<IPokemonColorsResponseData | undefined>(undefined)
+
+  const fetchPokemonColors = useCallback(async () => {
+    setIsLoadingImage(true)
+    api.get<IPokemonColorsResponseData>(`/pokemon-colors/${pokemonNameToQueryableName(selectedPokemon)}?shiny=false`)
+      .then((response) => {
+        setPokemonColorData(response.data)
+        if (imgRef.current) {
+          const folder = response.data.isShiny ? 'shiny' : 'normal'
+          const spritePath = `/sprites/${folder}/${response.data.filename}`
+          imgRef.current.src = spritePath
+          imgRef.current.crossOrigin = "anonymous"
+          imgRef.current.alt = selectedPokemon
+        }
+        // Set colors from API response
+        setDisplayedColors(response.data.colors.slice(0, 3))
+        setColors(response.data.colors)
+        window.setTimeout(() => setIsLoadingImage(false), 500)
+      })
+      .catch((error) => {
+        console.error(error)
+        setPokemonColorData(undefined)
+        setIsLoadingImage(false)
+      })
+  }, [selectedPokemon])
 
   useEffect(() => {
-    if (!imgRef.current) return
-    imgRef.current.crossOrigin = "anonymous"
-    imgRef.current.alt = selectedPokemon
-    if (imgUrl) {
-      imgRef.current.src = imgUrl
+    if (pokemonData && selectedPokemon) {
+      fetchPokemonColors()
     }
+  }, [pokemonData, selectedPokemon, fetchPokemonColors])
 
-    imgRef.current.onerror = () => {
-      setIsLoadingImage(true)
-      if (!imgRef.current) return
-      const newUrl =
-        "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@cb66bc8/sprites/pokemon/" +
-        pokemonId +
-        ".png"
-      imgRef.current.src = newUrl
-    }
+  // Handle image load for cropping (sprite image still needs cropping for display)
+  useEffect(() => {
+    if (!imgRef.current) return
 
     imgRef.current.onload = async () => {
-      setIsLoadingImage(true)
       if (!imgRef.current) return
       try {
         const croppedImage = await cropWhitespace(imgRef.current)
         setSpriteImageUrl(croppedImage)
       } catch (error) {
-        console.error(selectedPokemon, imgUrl)
+        console.error(selectedPokemon, imgRef.current.src)
         console.error("Error cropping image:", error)
       }
-
-      const canvas = document.createElement("canvas")
-      const ctx = canvas.getContext("2d")!
-
-      // Set canvas size to match image
-      canvas.width = imgRef.current.width
-      canvas.height = imgRef.current.height
-      ctx.drawImage(
-        imgRef.current,
-        0,
-        0,
-        imgRef.current.width,
-        imgRef.current.height
-      )
-
-      const imageData = ctx.getImageData(
-        0,
-        0,
-        imgRef.current.width,
-        imgRef.current.height
-      ).data
-      let colorCount: Record<string, number> = {}
-
-      // Helper function to round colors for grouping similar shades
-      const roundColor = (value: number, precision: number) =>
-        Math.round(value / precision) * precision
-
-      const isSurroundedByTransparent = (x: number, y: number): boolean => {
-        if (!imgRef.current) return false
-        const index = (y * imgRef.current.width + x) * 4
-
-        // Skip fully transparent pixels
-        if (imageData[index + 3] === 0) return true
-
-        const neighborOffsets = [
-          [-1, 0],
-          [1, 0],
-          [0, -1],
-          [0, 1],
-        ]
-
-        for (const [dx, dy] of neighborOffsets) {
-          const nx = x + dx
-          const ny = y + dy
-
-          if (
-            nx >= 0 &&
-            nx < imgRef.current.width &&
-            ny >= 0 &&
-            ny < imgRef.current.height
-          ) {
-            const ni = (ny * imgRef.current.width + nx) * 4
-            const alpha = imageData[ni + 3]
-            if (alpha === 0) return true // If any neighbor is transparent
-          }
-        }
-
-        return false
-      }
-
-      // Iterate over each pixel
-      for (let y = 0; y < imgRef.current.height; y++) {
-        for (let x = 0; x < imgRef.current.width; x++) {
-          const index = (y * imgRef.current.width + x) * 4
-          const r = roundColor(imageData[index], 1)
-          const g = roundColor(imageData[index + 1], 1)
-          const b = roundColor(imageData[index + 2], 1)
-          const a = imageData[index + 3]
-
-          if (a === 0) continue // skip transparent
-          const brightness = (r + g + b) / 3
-          if (brightness < 26.5) continue // skip near black
-
-          if (isSurroundedByTransparent(x, y) && brightness < 35) continue // skip outline-adjacent pixels that are darker
-
-          const color = `${r},${g},${b}`
-          colorCount[color] = (colorCount[color] || 0) + 1
-        }
-      }
-
-      if (Object.keys(colorCount).length > 30) {
-        colorCount = {}
-        for (let y = 0; y < imgRef.current.height; y++) {
-          for (let x = 0; x < imgRef.current.width; x++) {
-            const index = (y * imgRef.current.width + x) * 4
-            const r = roundColor(imageData[index], 60)
-            const g = roundColor(imageData[index + 1], 60)
-            const b = roundColor(imageData[index + 2], 60)
-            const a = imageData[index + 3]
-
-            if (a === 0) continue // skip transparent
-            const brightness = (r + g + b) / 3
-            if (brightness < 26.5) continue // skip near black
-
-            if (isSurroundedByTransparent(x, y) && brightness < 35) continue // skip outline-adjacent pixels that are darker
-
-            const color = `${r},${g},${b}`
-            colorCount[color] = (colorCount[color] || 0) + 1
-          }
-        }
-      }
-      let totalPixels = 0
-
-      // Convert to array, sort by frequency, and get top N colors
-      const sortedColors = Object.entries(colorCount)
-        .sort((a, b) => b[1] - a[1])
-        .map(([color, count]) => {
-          totalPixels += count
-          const rgbColors = color.split(",")
-          return {
-            color: rgbColors,
-            count,
-          }
-        })
-      // some images are not pixel art and have lots of pixels with many different colors, causing slow load times
-      const uniquelySortedColors =
-        sortedColors.length > 25
-          ? sortedColors
-          : getMostUniqueColors(sortedColors, pokemonId)
-      const colorsByLuminance = [...uniquelySortedColors].slice(0, 3)
-      orderByLuminance(colorsByLuminance)
-      const rgbColors: TColorData[] = uniquelySortedColors.map((rgb) => {
-        return {
-          color: rgbToHex(
-            parseInt(rgb.color[0]),
-            parseInt(rgb.color[1]),
-            parseInt(rgb.color[2])
-          ),
-          percentage: (rgb.count / totalPixels) * 100,
-        }
-      })
-      setDisplayedColors([
-        ...colorsByLuminance.map((rgb) => {
-          return {
-            color: rgbToHex(
-              parseInt(rgb.color[0]),
-              parseInt(rgb.color[1]),
-              parseInt(rgb.color[2])
-            ),
-            percentage: (rgb.count / totalPixels) * 100,
-          }
-        }),
-      ])
-      setColors([
-        ...colorsByLuminance.map((rgb) => {
-          return {
-            color: rgbToHex(
-              parseInt(rgb.color[0]),
-              parseInt(rgb.color[1]),
-              parseInt(rgb.color[2])
-            ),
-            percentage: (rgb.count / totalPixels) * 100,
-          }
-        }),
-        ...rgbColors.slice(3),
-      ])
-      // setColors(orderedColors)
-      window.setTimeout(() => setIsLoadingImage(false), 500)
     }
-  }, [imgUrl, selectedPokemon, imgRef, pokemonId])
+  }, [selectedPokemon])
 
-  const api = new MainClient()
+  const PokeApi = new MainClient()
 
   const getPokemon = (
     overrideName?: string,
     retryCount: number = 0
   ): Promise<Pokemon | undefined> => {
-    return api.pokemon
+    return PokeApi.pokemon
       .getPokemonByName(
         pokemonNameToQueryableName(overrideName ?? selectedPokemon)
       )
       .then((data) => {
-        api.pokemon
+        PokeApi.pokemon
           .getPokemonSpeciesByName(data.species.name)
           .then((data) => {
             setSpeciesData(data)
@@ -566,13 +398,9 @@ const PokemonSwatch: React.FC<PokemonSwatchProps> = ({
             <div
               key={index}
               style={{
-                backgroundColor: hexColor,
-                height: "50vh",
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "flex-end",
-                minHeight: "428px",
+                backgroundColor: hexColor
               }}
+              className={styles.swatchColorContainer}
             >
               <div className={styles.swatchInfoContainer}>
                 <ColorDropdown

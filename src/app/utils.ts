@@ -32,7 +32,6 @@ const getPokemonIconNum = (pokemon: string | number) => {
 
 export const getPokemonIcon = (pokemon: string | number) => {
   const num = getPokemonIconNum(pokemon)
-  console.log(num)
 
   const top = Math.floor(num / 12) * 30
   const left = (num % 12) * 40
@@ -266,19 +265,41 @@ export const getWeaknesses = (type1: TPokemonType, type2?: TPokemonType) => {
   // })
 }
 
+/**
+ * Check if a Pokemon is a form with a shared base ID
+ * (form name differs from base species name for that ID)
+ */
+const isFormWithSharedId = (pokemonName: string, pokemonId: number): boolean => {
+  const baseName = (speciesMap as Record<string, string>)[String(pokemonId)]
+  return !!baseName && baseName !== pokemonName
+}
+
 export const getShinyPokemonSprites = (
   pokemonNumber: number,
   pokemonKey: string,
-  shinySpriteUrl: string
+  shinySpriteUrl: string,
+  pokemonName?: string
 ): string => {
-  switch (true) {
-    case shinySpriteUrl.includes("10043"):
-    case shinySpriteUrl.includes("10044"):
-    case pokemonNumber >= 650:
-      return `https://cdn.jsdelivr.net/gh/pagefaultgames/pokerogue@02cac77/public/images/pokemon/shiny/${pokemonKey}.png`
-    default:
-      return shinySpriteUrl
+  // Silvally forms use PokeRogue
+  if (pokemonName?.startsWith("silvally-")) {
+    return `https://cdn.jsdelivr.net/gh/pagefaultgames/pokerogue@02cac77/public/images/pokemon/shiny/${pokemonKey}.png`
   }
+  
+  // Xerneas - ALL shiny sprites use PokeRogue (base and forms)
+  if (pokemonName === "xerneas" || pokemonName?.startsWith("xerneas-")) {
+    return `https://cdn.jsdelivr.net/gh/pagefaultgames/pokerogue@02cac77/public/images/pokemon/shiny/${pokemonKey}.png`
+  }
+  
+  // Forms with shared base ID >= 650 use PokeRogue (vivillon, floette, etc.)
+  // Forms with shared base ID < 650 use PokeAPI (deerling, sawsbuck, arceus, etc.)
+  if (pokemonName && isFormWithSharedId(pokemonName, pokemonNumber)) {
+    if (pokemonNumber >= 650) {
+      return `https://cdn.jsdelivr.net/gh/pagefaultgames/pokerogue@02cac77/public/images/pokemon/shiny/${pokemonKey}.png`
+    }
+  }
+  
+  // All other Pokemon use PokeAPI
+  return shinySpriteUrl
 }
 
 export const getPokemonSpriteURL = (
@@ -287,32 +308,31 @@ export const getPokemonSpriteURL = (
   pokeApiURL: string,
   pokeRogueURL: string
 ): string => {
-  if (
-    pokemonString.includes("alcremie") ||
-    pokemonString.includes("castform") ||
-    pokemonString.includes("pikachu") ||
-    pokemonString.includes("gmax") ||
-    pokemonString.includes("gourgeist") ||
-    // pokemonString.includes("deoxys") ||
-    // pokemonString.includes("keldeo") ||
-    // pokemonString.includes("meloetta") ||
-    // pokemonString.includes("genesect") ||
-    // pokemonString.includes("arceus") ||
-    pokemonId <= 650
-  ) {
-    return pokeApiURL
-  } else {
-    switch (pokemonString) {
-      case "cherrim-sunshine":
-      case "zygarde-10-power-construct":
-      case "zygarde-50-power-construct":
-        return pokeApiURL
-      case "zygarde-10":
-        return "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@cb66bc8/sprites/pokemon/10118.png"
-      default:
-        return pokeRogueURL
+  // Silvally forms use PokeRogue (but base silvally uses PokeAPI)
+  if (pokemonString.startsWith("silvally-")) {
+    return pokeRogueURL
+  }
+  
+  // Xerneas forms use PokeRogue (but base xerneas uses PokeAPI)
+  if (pokemonString.startsWith("xerneas-")) {
+    return pokeRogueURL
+  }
+  
+  // Forms with shared base ID >= 650 use PokeRogue (vivillon, floette, etc.)
+  // Forms with shared base ID < 650 use PokeAPI (deerling, sawsbuck, arceus, etc.)
+  if (isFormWithSharedId(pokemonString, pokemonId)) {
+    if (pokemonId >= 650) {
+      return pokeRogueURL
     }
   }
+  
+  // Special case for zygarde-10
+  if (pokemonString === "zygarde-10") {
+    return "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@cb66bc8/sprites/pokemon/10118.png"
+  }
+  
+  // All other Pokemon use PokeAPI
+  return pokeApiURL
 }
 
 export const formattedColor = (
@@ -480,52 +500,88 @@ export const pokemonFormsToExclude = [
   "spewpa-fancy",
   "spewpa-poke-ball",
   "rockruff-own-tempo",
+  "pikachu-original-cap",
+  "pikachu-hoenn-cap",
+  "pikachu-sinnoh-cap",
+  "pikachu-unova-cap",
+  "pikachu-kanto-cap",
+  "pikachu-johto-cap",
+  "pikachu-kalos-cap",
+  "pikachu-alola-cap",
+  "pikachu-partner-cap",
+  "pikachu-world-cap",
+  "pikachu-starter",
+  "eevee-starter",
+  "greninja-ash",
 
   // Megas with no sprites yet
   // remove these when we have the sprites
-  "clefable-mega",
-  "starmie-mega",
-  "meganium-mega",
-  "feraligatr-mega",
-  "skarmory-mega",
-  "froslass-mega",
-  "emboar-mega",
-  "excadrill-mega",
-  "scolipede-mega",
-  "scrafty-mega",
-  "eelektross-mega",
-  "chandelure-mega",
+  // "clefable-mega",
+  // "starmie-mega",
+  // "meganium-mega",
+  // "feraligatr-mega",
+  // "skarmory-mega",
+  // "froslass-mega",
+  // "emboar-mega",
+  // "excadrill-mega",
+  // "scolipede-mega",
+  // "scrafty-mega",
+  // "eelektross-mega",
+  // "chandelure-mega",
+  // "chesnaught-mega",
+  // "delphox-mega",
+  // "greninja-mega",
+  // "pyroar-mega",
+  // "floette-mega",
+  // "malamar-mega",
+  // "barbaracle-mega",
+  // "dragalge-mega",
+  // "hawlucha-mega",
+  // "zygardemega",
+  // "drampa-mega",
+  // "falinks-mega",
+  // "raichu-mega-x",
+  // "raichu-mega-y",
+  // "chimecho-mega",
+  // "absol-mega-z",
+  // "staraptor-mega",
+  // "garchomp-mega-z",
+  // "lucario-mega-z",
+  // "heatran-mega",
+  // "darkrai-mega",
+  // "golurk-mega",
+  // "meowstic-m-mega",
+  // "meowstic-f-mega",
+  // "crabominable-mega",
+  // "golisopod-mega",
+  // "magearna-mega",
+  // "magearna-original-mega",
+  // "zeraora-mega",
+  // "scovillain-mega",
+  // "glimmora-mega",
+  // "tatsugiri-curly-mega",
+  // "baxcalibur-mega",
+  // "tatsugiri-droopy-mega",
+  // "tatsugiri-stretchy-mega",
+]
+
+export const pokemonFormsWithNoShinySprite = [
   "chesnaught-mega",
   "delphox-mega",
   "greninja-mega",
-  "pyroar-mega",
-  "floette-mega",
-  "malamar-mega",
-  "barbaracle-mega",
-  "dragalge-mega",
-  "hawlucha-mega",
-  "zygardemega",
-  "drampa-mega",
-  "falinks-mega",
   "raichu-mega-x",
   "raichu-mega-y",
   "chimecho-mega",
-  "absol-mega-z",
-  "staraptor-mega",
   "garchomp-mega-z",
   "lucario-mega-z",
-  "heatran-mega",
   "darkrai-mega",
   "golurk-mega",
   "meowstic-m-mega",
   "meowstic-f-mega",
+  "meowstic-mega",
   "crabominable-mega",
   "golisopod-mega",
-  "magearna-mega",
-  "magearna-original-mega",
   "zeraora-mega",
-  "scovillain-mega",
-  "glimmora-mega",
   "tatsugiri-curly-mega",
   "baxcalibur-mega",
   "tatsugiri-droopy-mega",
@@ -549,4 +605,10 @@ export const getRandomPokemonURL = () => {
     `${randomNumber}`
   ]
   return `/pokemon/${randomPokemon}`
+}
+
+const PRISMA_CUID_REGEX = /^c[^\s-]{8,}$/;
+
+export function isPrismaCuid(id: string): boolean {
+  return PRISMA_CUID_REGEX.test(id);
 }

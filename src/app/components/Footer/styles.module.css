@@ -40,11 +40,11 @@
   line-height: 1.5;
 }
 
-.githubLink {
+.link {
   text-decoration: underline;
 }
 
-.githubLink:hover {
+.link:hover {
   text-decoration: underline;
 }
 

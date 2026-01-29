@@ -31,6 +31,7 @@ import {
   getPokemonSpriteURL,
   getShinyPokemonSprites,
   pokemonFormsToExclude,
+  pokemonFormsWithNoShinySprite,
   pokemonNameToQueryableName,
   rgbToHex,
   shouldHaveFormSelector,
@@ -41,7 +42,6 @@ import {
   Autocomplete,
   Button,
   FormControl,
-  ListSubheader,
   Menu,
   MenuItem,
   Select,
@@ -65,7 +65,7 @@ import {
 } from "../../hooks"
 import ColorStrip from "../../components/ColorStrip"
 import CopyToClipboard from "../../components/CopyToClipboard"
-import SettingsIcon from "@mui/icons-material/Settings"
+import SettingsMenu from "../../components/SettingsMenu"
 import CatchingPokemonTwoToneIcon from "@mui/icons-material/CatchingPokemonTwoTone"
 import AddCircleIcon from "@mui/icons-material/AddCircle"
 import AutoAwesomeOutlinedIcon from "@mui/icons-material/AutoAwesomeOutlined"
@@ -91,6 +91,9 @@ import ListboxComponent from "@/app/components/VirtualizedListboxComponent"
 import PokeballAndLogo from "@/app/components/PokeballAndLogo"
 import SortableWrapList from "@/app/components/SortableWrapList"
 import Footer from "@/app/components/Footer"
+import axios from "axios"
+import { IPokemonColorsResponseData } from "@/types/PokemonColorResponseData"
+import api from "@/app/api/api"
 // Create a client
 const queryClient = new QueryClient()
 
@@ -149,10 +152,10 @@ function PokemonData({
   const [isAbsoluteLoading, setIsAbsoluteLoading] = useState<boolean>(false)
 
   // const queryClient = useQueryClient()
-  const api = new MainClient()
+  const PokeApi = new MainClient()
 
   const getPokemon = (overrideName?: string): Promise<Pokemon> => {
-    return api.pokemon
+    return PokeApi.pokemon
       .getPokemonByName(
         pokemonNameToQueryableName(
           overrideName ?? pokemonForm ?? pokemon ?? pokemonFromInput.label
@@ -168,7 +171,7 @@ function PokemonData({
   }
 
   const getPokemonSpecies = () => {
-    return api.pokemon
+    return PokeApi.pokemon
       .getPokemonSpeciesByName(pokemonFromInput.label)
       .then((data) => data)
       .catch((error) => console.error(error))
@@ -179,7 +182,7 @@ function PokemonData({
       setPokemonEvolutionData(undefined)
       return Promise.resolve(undefined)
     } else {
-      return api.evolution
+      return PokeApi.evolution
         .getEvolutionChainById(evolutionId)
         .then((data) => {
           setPokemonEvolutionData(data)
@@ -190,7 +193,7 @@ function PokemonData({
   }
 
   const getPokemonAbility = (abilityName: string) => {
-    return api.pokemon
+    return PokeApi.pokemon
       .getAbilityByName(abilityName)
       .then((data) => data)
       .catch((error) => console.error(error))
@@ -308,6 +311,29 @@ function PokemonData({
       (pokemonForm ?? pokemonFromInput.label) as TPokemonAnimationKey
     ]
 
+  const [pokemonColorData, setPokemonColorData] = useState<IPokemonColorsResponseData | undefined>(undefined)
+  
+  const fetchPokemonColors = useCallback(async (isShiny: boolean) => {
+    const pokemonName = pokemonForm ?? pokemonNameToQueryableName(pokemon ?? pokemonFromInput.label)
+    api.get<IPokemonColorsResponseData>(`/pokemon-colors/${pokemonName}?shiny=${isShiny}`)
+    .then((response) => {
+      console.log(response.data)
+      setIsAbsoluteLoading(false)
+      setPokemonColorData(response.data)
+      if (imgRef.current) {
+        const folder = response.data.isShiny ? 'shiny' : 'normal'
+        const spritePath = `/sprites/${folder}/${response.data.filename}`
+        imgRef.current.src = spritePath
+        imgRef.current.crossOrigin = "anonymous"
+      }
+      setColorData(response.data.colors)
+    })
+    .catch((error) => {
+      console.error(error)
+      setPokemonColorData(undefined)
+    })
+  }, [pokemonForm, pokemon, pokemonFromInput.label])
+
   useEffect(() => {
     if (
       pokemonData &&
@@ -319,73 +345,9 @@ function PokemonData({
           (pokemonForm ?? pokemon ?? pokemonFromInput.label))
       // data.sprites.other['official-artwork'].front_default
     ) {
-      setIsAbsoluteLoading(true)
-      if (pokemonForm) {
-        const imgUrl =
-          "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@cb66bc8/sprites/pokemon/" +
-          (showShinySprite ? "shiny/" : "") +
-          pokemonData?.id +
-          pokemonForm?.replace(pokemonData?.name ?? "", "") +
-          ".png"
-        console.log(imgUrl)
-        const imgUrl2 = `https://cdn.jsdelivr.net/gh/pagefaultgames/pokerogue@02cac77/public/images/pokemon/${animationMapKey}.png`
-        if (imgRef.current) {
-          imgRef.current.src = showShinySprite
-            ? getShinyPokemonSprites(
-                pokemonFromInput.id,
-                animationMapKey,
-                imgUrl
-              )
-            : getPokemonSpriteURL(
-                pokemonForm ?? pokemonData?.name ?? pokemon,
-                pokemonFromInput.id,
-                imgUrl,
-                imgUrl2
-              )
-        }
-      } else {
-        if (pokemonData.sprites.front_default) {
-          if (imgRef.current) {
-            imgRef.current.src = pokemonData.sprites.front_shiny
-              ? showShinySprite
-                ? getShinyPokemonSprites(
-                    pokemonData.id,
-                    animationMapKey,
-                    pokemonData.sprites.front_shiny
-                  )
-                : pokemonData.sprites.front_default
-              : pokemonData.sprites.front_default
-          }
-        }
-      }
-      if (imgRef.current) {
-        imgRef.current.crossOrigin = "anonymous"
-      }
-      // setIsAbsoluteLoading(false)
+      fetchPokemonColors(showShinySprite)
     }
-  }, [
-    pokemonData,
-    pokemon,
-    pokemonForm,
-    hasForm,
-    animationMapKey,
-    imgRef.current,
-    showShinySprite,
-    pokemonFromInput.label,
-  ])
-
-  // useEffect(() => {
-  //   if (
-  //     pokemonData &&
-  //     pokemonData.sprites.other &&
-  //     pokemonData.sprites.other['official-artwork'].front_default
-  //   ) {
-  //     officialImage.src = pokemonData.sprites.other['official-artwork'].front_default
-  //     officialImage.width = 475
-  //     officialImage.height = 475
-  //     officialImage.crossOrigin = 'anonymous'
-  //   }
-  // }, [pokemonData, officialImage])
+  }, [pokemonData, pokemonForm, pokemon, pokemonFromInput.label, hasForm, showShinySprite])
 
   useEffect(() => {
     setPokemonForm(undefined)
@@ -437,76 +399,57 @@ function PokemonData({
         console.error("Error cropping image:", error)
       }
 
-      const canvas = document.createElement("canvas")
-      const ctx = canvas.getContext("2d")!
+      if (!pokemonColorData) {
 
-      // Set canvas size to match image
-      canvas.width = img.width
-      canvas.height = img.height
-      ctx.drawImage(img, 0, 0, img.width, img.height)
+        const canvas = document.createElement("canvas")
+        const ctx = canvas.getContext("2d")!
 
-      const imageData = ctx.getImageData(0, 0, img.width, img.height).data
-      let colorCount: Record<string, number> = {}
+        // Set canvas size to match image
+        canvas.width = img.width
+        canvas.height = img.height
+        ctx.drawImage(img, 0, 0, img.width, img.height)
 
-      // Helper function to round colors for grouping similar shades
-      const roundColor = (value: number, precision: number) =>
-        Math.round(value / precision) * precision
+        const imageData = ctx.getImageData(0, 0, img.width, img.height).data
+        let colorCount: Record<string, number> = {}
 
-      const isSurroundedByTransparent = (x: number, y: number): boolean => {
-        const index = (y * img.width + x) * 4
+        // Helper function to round colors for grouping similar shades
+        const roundColor = (value: number, precision: number) =>
+          Math.round(value / precision) * precision
 
-        // Skip fully transparent pixels
-        if (imageData[index + 3] === 0) return true
-
-        const neighborOffsets = [
-          [-1, 0],
-          [1, 0],
-          [0, -1],
-          [0, 1],
-        ]
-
-        for (const [dx, dy] of neighborOffsets) {
-          const nx = x + dx
-          const ny = y + dy
-
-          if (nx >= 0 && nx < img.width && ny >= 0 && ny < img.height) {
-            const ni = (ny * img.width + nx) * 4
-            const alpha = imageData[ni + 3]
-            if (alpha === 0) return true // If any neighbor is transparent
-          }
-        }
-
-        return false
-      }
-
-      // Iterate over each pixel
-      for (let y = 0; y < img.height; y++) {
-        for (let x = 0; x < img.width; x++) {
+        const isSurroundedByTransparent = (x: number, y: number): boolean => {
           const index = (y * img.width + x) * 4
-          const r = roundColor(imageData[index], 1)
-          const g = roundColor(imageData[index + 1], 1)
-          const b = roundColor(imageData[index + 2], 1)
-          const a = imageData[index + 3]
 
-          if (a === 0) continue // skip transparent
-          const brightness = (r + g + b) / 3
-          if (brightness < 26.5) continue // skip near black
+          // Skip fully transparent pixels
+          if (imageData[index + 3] === 0) return true
 
-          if (isSurroundedByTransparent(x, y) && brightness < 35) continue // skip outline-adjacent pixels that are darker
+          const neighborOffsets = [
+            [-1, 0],
+            [1, 0],
+            [0, -1],
+            [0, 1],
+          ]
 
-          const color = `${r},${g},${b}`
-          colorCount[color] = (colorCount[color] || 0) + 1
+          for (const [dx, dy] of neighborOffsets) {
+            const nx = x + dx
+            const ny = y + dy
+
+            if (nx >= 0 && nx < img.width && ny >= 0 && ny < img.height) {
+              const ni = (ny * img.width + nx) * 4
+              const alpha = imageData[ni + 3]
+              if (alpha === 0) return true // If any neighbor is transparent
+            }
+          }
+
+          return false
         }
-      }
 
-      if (Object.keys(colorCount).length > 30) {
-        colorCount = {}
+        // Iterate over each pixel
         for (let y = 0; y < img.height; y++) {
           for (let x = 0; x < img.width; x++) {
             const index = (y * img.width + x) * 4
-            const r = roundColor(imageData[index], 60)
-            const g = roundColor(imageData[index + 1], 60)
-            const b = roundColor(imageData[index + 2], 60)
+            const r = roundColor(imageData[index], 1)
+            const g = roundColor(imageData[index + 1], 1)
+            const b = roundColor(imageData[index + 2], 1)
             const a = imageData[index + 3]
 
             if (a === 0) continue // skip transparent
@@ -519,39 +462,49 @@ function PokemonData({
             colorCount[color] = (colorCount[color] || 0) + 1
           }
         }
-      }
-      let totalPixels = 0
 
-      // Convert to array, sort by frequency, and get top N colors
-      const sortedColors = Object.entries(colorCount)
-        .sort((a, b) => b[1] - a[1])
-        .map(([color, count]) => {
-          totalPixels += count
-          const rgbColors = color.split(",")
-          return {
-            color: rgbColors,
-            count,
+        if (Object.keys(colorCount).length > 30) {
+          colorCount = {}
+          for (let y = 0; y < img.height; y++) {
+            for (let x = 0; x < img.width; x++) {
+              const index = (y * img.width + x) * 4
+              const r = roundColor(imageData[index], 60)
+              const g = roundColor(imageData[index + 1], 60)
+              const b = roundColor(imageData[index + 2], 60)
+              const a = imageData[index + 3]
+
+              if (a === 0) continue // skip transparent
+              const brightness = (r + g + b) / 3
+              if (brightness < 26.5) continue // skip near black
+
+              if (isSurroundedByTransparent(x, y) && brightness < 35) continue // skip outline-adjacent pixels that are darker
+
+              const color = `${r},${g},${b}`
+              colorCount[color] = (colorCount[color] || 0) + 1
+            }
           }
-        })
-      // some images are not pixel art and have lots of pixels with many different colors, causing slow load times
-      const uniquelySortedColors =
-        sortedColors.length > 25
-          ? sortedColors
-          : getMostUniqueColors(sortedColors, pokemonFromInput.id)
-      const colorsByLuminance = [...uniquelySortedColors].slice(0, 3)
-      orderByLuminance(colorsByLuminance)
-      const rgbColors: TColorData[] = uniquelySortedColors.map((rgb) => {
-        return {
-          color: rgbToHex(
-            parseInt(rgb.color[0]),
-            parseInt(rgb.color[1]),
-            parseInt(rgb.color[2])
-          ),
-          percentage: (rgb.count / totalPixels) * 100,
         }
-      })
-      setColorData([
-        ...colorsByLuminance.map((rgb) => {
+        let totalPixels = 0
+
+        // Convert to array, sort by frequency, and get top N colors
+        const sortedColors = Object.entries(colorCount)
+          .sort((a, b) => b[1] - a[1])
+          .map(([color, count]) => {
+            totalPixels += count
+            const rgbColors = color.split(",")
+            return {
+              color: rgbColors,
+              count,
+            }
+          })
+        // some images are not pixel art and have lots of pixels with many different colors, causing slow load times
+        const uniquelySortedColors =
+          sortedColors.length > 25
+            ? sortedColors
+            : getMostUniqueColors(sortedColors, pokemonFromInput.id)
+        const colorsByLuminance = [...uniquelySortedColors].slice(0, 3)
+        orderByLuminance(colorsByLuminance)
+        const rgbColors: TColorData[] = uniquelySortedColors.map((rgb) => {
           return {
             color: rgbToHex(
               parseInt(rgb.color[0]),
@@ -560,9 +513,21 @@ function PokemonData({
             ),
             percentage: (rgb.count / totalPixels) * 100,
           }
-        }),
-        ...rgbColors.slice(3),
-      ])
+        })
+        setColorData([
+          ...colorsByLuminance.map((rgb) => {
+            return {
+              color: rgbToHex(
+                parseInt(rgb.color[0]),
+                parseInt(rgb.color[1]),
+                parseInt(rgb.color[2])
+              ),
+              percentage: (rgb.count / totalPixels) * 100,
+            }
+          }),
+          ...rgbColors.slice(3),
+        ])
+      }
       // setColorData(rgbColors)
       window.setTimeout(() => setIsAbsoluteLoading(false), 500)
     }
@@ -610,14 +575,6 @@ function PokemonData({
 
   const data = dataFromApi || pokemonData
 
-  const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null)
-  const open = Boolean(anchorEl)
-  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-    setAnchorEl(event.currentTarget)
-  }
-  const handleClose = () => {
-    setAnchorEl(null)
-  }
 
   // this is for the autocomplete open state
   const [optionsOpen, setOptionsOpen] = useState(false)
@@ -685,7 +642,7 @@ function PokemonData({
 
   const navigateToSwatches = () => {
     if (speciesData?.color) {
-      api.pokemon
+      PokeApi.pokemon
         .getPokemonColorByName(speciesData.color.name)
         .then((data) => {
           const randomEntries = []
@@ -968,55 +925,16 @@ function PokemonData({
             </div>
           )}
         </div>
-        <div>
-          <Button
-            id="basic-button"
-            className={styles.settingsIcon}
-            aria-controls={open ? "basic-menu" : undefined}
-            aria-haspopup="true"
-            aria-expanded={open ? "true" : undefined}
-            onClick={handleClick}
-            size="small"
-            disableRipple
-          >
-            <SettingsIcon
-              fontSize="inherit"
-              htmlColor={getContrastingTextColor(
-                colorData.at(3)?.color ?? "white"
-              )}
-            />
-          </Button>
-          <Menu
-            id="basic-menu"
-            anchorEl={anchorEl}
-            open={open}
-            onClose={handleClose}
-            transformOrigin={{
-              vertical: -10,
-              horizontal: 85,
-            }}
-            MenuListProps={{
-              "aria-labelledby": "basic-button",
-            }}
-            sx={{
-              padding: "50px",
-            }}
-          >
-            <ListSubheader>Color Format</ListSubheader>
-            <MenuItem onClick={() => setColorFormat("hex")}>Hex</MenuItem>
-            <MenuItem onClick={() => setColorFormat("rgb")}>RGB</MenuItem>
-            <MenuItem onClick={() => setColorFormat("hsl")}>HSL</MenuItem>
-            <MenuItem onClick={() => setColorFormat("hsv")}>HSV</MenuItem>
-            <ListSubheader>Show Animations</ListSubheader>
-            <MenuItem onClick={() => setShowAnimations((prev) => !prev)}>
-              {showAnimations ? "Hide" : "Show"}
-            </MenuItem>
-            <ListSubheader>Play Pokemon Audio</ListSubheader>
-            <MenuItem onClick={() => setPlayPokemonCries((prev) => !prev)}>
-              {playPokemonCries ? "No" : "Yes"}
-            </MenuItem>
-          </Menu>
-        </div>
+        <SettingsMenu
+          className={styles.settingsIcon}
+          iconColor={getContrastingTextColor(colorData.at(3)?.color ?? "white")}
+          colorFormat={colorFormat}
+          setColorFormat={setColorFormat}
+          showAnimations={showAnimations}
+          setShowAnimations={setShowAnimations}
+          playPokemonCries={playPokemonCries}
+          setPlayPokemonCries={setPlayPokemonCries}
+        />
       </header>
       <div
         className={styles.contentContainer}
@@ -1042,7 +960,7 @@ function PokemonData({
               </div>
               {/* this is the shiny feature, commenting out for now because some shiny
               sprites suck and dealing with shiny is kind of annoying */}
-              <Button
+              {!pokemonFormsWithNoShinySprite.includes(data?.name ?? "") && <Button
                 id="toggleShinyButton"
                 onClick={() => {
                   if (data) {
@@ -1130,7 +1048,7 @@ function PokemonData({
                     }}
                   />
                 )}
-              </Button>
+              </Button>}
               <Button
                 id="addToTeamButton"
                 onClick={() => {
@@ -1231,49 +1149,51 @@ function PokemonData({
                         )
                       })}
                       {(
-                        ((speciesData?.varieties ?? []).length
+                        ((pokemonData?.forms ?? []).length
                           ? // we're excluding the default form from the forms list
                             pokemonData?.forms.slice(1)
                           : pokemonData?.forms) ?? []
                       ).map((f, idx) => (
-                        <MenuItem
-                          key={f.name}
-                          onClick={() => {
-                            if (
-                              idx === 0 &&
-                              !(speciesData?.varieties ?? []).length
-                            ) {
-                              // setIsFormAndNotVariety(false)
-                              router.push(`${pathname}`)
-                            } else {
-                              // setIsFormAndNotVariety(true)
-                              router.push(
-                                `${pathname}?${createQueryString([
-                                  {
-                                    name: "form",
-                                    value: f.name,
-                                  },
-                                  {
-                                    name: "isForm",
-                                    value: "true",
-                                  },
-                                ])}`
-                              )
-                            }
-                            // setPokemonForm(f.name)
-                          }}
-                          style={{ textTransform: "capitalize" }}
-                          value={f.name}
-                        >
-                          {idx === 0 && !(speciesData?.varieties ?? []).length
-                            ? "Default"
-                            : f.name
-                                .split(
-                                  `${pokemonFromInput.label.toLowerCase()}-`
+                        !pokemonFormsToExclude.includes(f.name) && (
+                          <MenuItem
+                            key={f.name}
+                            onClick={() => {
+                              if (
+                                idx === 0 &&
+                                !(speciesData?.varieties ?? []).length
+                              ) {
+                                // setIsFormAndNotVariety(false)
+                                router.push(`${pathname}`)
+                              } else {
+                                // setIsFormAndNotVariety(true)
+                                router.push(
+                                  `${pathname}?${createQueryString([
+                                    {
+                                      name: "form",
+                                      value: f.name,
+                                    },
+                                    {
+                                      name: "isForm",
+                                      value: "true",
+                                    },
+                                  ])}`
                                 )
-                                .slice(1)}{" "}
-                          Form
-                        </MenuItem>
+                              }
+                              // setPokemonForm(f.name)
+                            }}
+                            style={{ textTransform: "capitalize" }}
+                            value={f.name}
+                          >
+                            {idx === 0 && !(speciesData?.varieties ?? []).length
+                              ? "Default"
+                              : f.name
+                                  .split(
+                                    `${pokemonFromInput.label.toLowerCase()}-`
+                                  )
+                                  .slice(1)}{" "}
+                              Form
+                          </MenuItem>
+                        )
                       ))}
                     </Select>
                   </FormControl>

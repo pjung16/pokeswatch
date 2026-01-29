@@ -80,3 +80,37 @@
     }
   }
 }
+
+.settingsIcon {
+  min-width: 40px !important;
+  height: 40px;
+  color: inherit !important;
+  font-size: 28px !important;
+  cursor: pointer;
+  margin-right: 50px !important;
+  padding: 7px;
+  border-radius: 50% !important;
+  background-color: #ffa1a1 !important;
+  filter: brightness(100%);
+  transition: all 0.2s ease-in-out !important;
+}
+
+.settingsIcon:hover {
+  filter: brightness(120%);
+  transition: all 0.2s ease-in-out;
+}
+
+@media only screen and (max-width: 766px) {
+  .settingsIcon {
+    margin-right: 20px !important;
+  }
+}
+
+@media only screen and (max-width: 480px) {
+  .settingsIcon {
+    min-width: 32px !important;
+    height: 32px;
+    font-size: 22px !important;
+    margin-right: 10px !important;
+  }
+}

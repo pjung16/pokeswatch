@@ -1,15 +1,12 @@
 "use client"
 import styles from "./page.module.css"
 import PokeballAndLogo from "./components/PokeballAndLogo"
+import SettingsMenu from "./components/SettingsMenu"
 import { EmptyPokemonCombobox } from "./components/PokemonCombobox/EmptyPokemonCombobox"
 import { getPokemonIcon } from "./utils"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { useWindowDimensions } from "./hooks"
 
 export default function Home() {
-  const router = useRouter()
-
   const style: React.CSSProperties = {
     ["--color1" as any]: "#e54545",
     ["--color2" as any]: "#ce372f",
@@ -47,8 +44,9 @@ export default function Home() {
           )
         })}
       </div>
-      <header>
+      <header style={{ display: "flex", alignItems: "center", width: "100%", justifyContent: "space-between" }}>
         <PokeballAndLogo />
+        <SettingsMenu className={styles.settingsIcon} iconColor="black" />
       </header>
       <main className={styles.main}>
         <div className={styles.mainText}>

@@ -256,11 +256,26 @@
   }
 }
 
+.swatchColorContainer {
+  height: 50vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  min-height: 428px;
+  container: swatchColorContainer / inline-size;
+}
+
 .swatchInfoContainer {
   display: flex;
   align-items: center;
   justify-content: center;
   margin-bottom: 20px;
+}
+
+@container swatchColorContainer (max-width: 142px) {
+  .swatchInfoContainer {
+    flex-direction: column-reverse;
+  }
 }
 
 @media only screen and (max-width: 1460px) {
@@ -274,9 +289,5 @@
   .footer {
     padding: 20px 20px;
     font-size: 12px;
-  }
-
-  .swatchInfoContainer {
-    flex-direction: column-reverse;
   }
 }

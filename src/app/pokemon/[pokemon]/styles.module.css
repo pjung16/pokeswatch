@@ -459,26 +459,6 @@
   transition: all 0.2s ease-in-out;
 }
 
-.settingsIconSwatchPage {
-  min-width: 40px !important;
-  height: 40px;
-  color: inherit !important;
-  font-size: 28px !important;
-  cursor: pointer;
-  margin-left: auto !important;
-  margin-right: 50px !important;
-  padding: 7px;
-  border-radius: 50% !important;
-  background-color: #ffc510CC !important;
-  filter: brightness(100%);
-  transition: all 0.2s ease-in-out !important;
-}
-
-.settingsIconSwatchPage:hover {
-  filter: brightness(120%);
-  transition: all 0.2s ease-in-out;
-}
-
 .footer {
   width: calc(100vw - 400px);
   padding: 20px 60px;
@@ -601,10 +581,6 @@
   .settingsIcon {
     right: 118px;
   }
-
-  .settingsIconSwatchPage {
-    margin-right: 130px !important;
-  }
 }
 
 @media only screen and (max-width: 924px) {
@@ -643,10 +619,6 @@
     margin-left: 50px;
   }
 
-  .settingsIconSwatchPage {
-    margin-right: 50px !important;
-  }
-
   .contentContainer {
     padding: 0 50px;
   }
@@ -671,10 +643,6 @@
 @media only screen and (max-width: 660px) {
   .pokemonSwatchContainer {
     grid-template-columns: repeat(1, 1fr);
-  }
-
-  .settingsIconSwatchPage {
-    margin-right: 7px !important;
   }
 
   .footer {

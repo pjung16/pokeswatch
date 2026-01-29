@@ -4,14 +4,13 @@ import React, {
   Suspense,
   useCallback,
   useEffect,
-  useMemo,
   useRef,
   useState,
 } from "react"
 import styles from "./styles.module.css"
 import species from "../species.json"
 import animationMap from "../animationMap.json"
-import { MainClient, Pokemon } from "pokenode-ts"
+import { MainClient, Pokemon, PokemonSpecies } from "pokenode-ts"
 import {
   QueryClient,
   QueryClientProvider,
@@ -19,22 +18,29 @@ import {
 } from "@tanstack/react-query"
 import {
   getPokemonIcon,
-  getPokemonSpriteURL,
-  getShinyPokemonSprites,
+  pokemonFormsToExclude,
+  pokemonFormsWithNoShinySprite,
   pokemonNameToQueryableName,
   rgbToHex,
+  shouldHaveFormSelector,
   speciesToOptions,
 } from "../utils"
-import { Autocomplete, Button, TextField } from "@mui/material"
+import { Autocomplete, Button, FormControl, MenuItem, Select, TextField } from "@mui/material"
 import { getContrastingBaseTextColor, getContrastingTextColor } from "../color"
 import { cropWhitespace } from "../image"
 import { useWindowDimensions } from "../hooks"
 import PokeballAndLogo from "../components/PokeballAndLogo"
+import SettingsMenu from "../components/SettingsMenu"
 import Footer from "../components/Footer"
 import classNames from "classnames"
 import { TPokemonAnimationKey } from "../types"
 import AutoAwesomeOutlinedIcon from "@mui/icons-material/AutoAwesomeOutlined"
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome"
+import DownloadIcon from "@mui/icons-material/Download"
+import axios from "axios"
+import { IPokemonColorsResponseData } from "@/types/PokemonColorResponseData"
+import api from "../api/api"
+import throttle from "lodash.throttle"
 
 const queryClient = new QueryClient()
 
@@ -60,36 +66,52 @@ function ColorSwitcherContent() {
     label: string
     id: number
   }>({ label: "ampharos", id: 181 })
-  const [pokemonData, setPokemonData] = useState<Pokemon | undefined>(undefined)
+  const [selectedForm, setSelectedForm] = useState<string | undefined>(undefined)
   const [showShinySprite, setShowShinySprite] = useState<boolean>(false)
   const [isAbsoluteLoading, setIsAbsoluteLoading] = useState<boolean>(false)
 
-  const api = new MainClient()
+  const PokeApi = new MainClient()
 
-  const getPokemon = (): Promise<Pokemon> => {
-    return api.pokemon
+  // The active Pokemon name - either the selected form or the base Pokemon
+  const activePokemonName = selectedForm ?? pokemonFromInput.label
+
+  // Only fetch base Pokemon data (for forms list)
+  const getBasePokemon = (): Promise<Pokemon> => {
+    return PokeApi.pokemon
       .getPokemonByName(pokemonNameToQueryableName(pokemonFromInput.label))
-      .then((data) => {
-        setPokemonData(data)
-        return data
-      })
+      .then((data) => data)
       .catch((_) => {
-        return api.pokemon
-          .getPokemonByName(pokemonFromInput.label)
-          .then((data) => {
-            setPokemonData(data)
-            return data
-          })
+        return PokeApi.pokemon.getPokemonByName(pokemonFromInput.label)
       })
   }
 
-  const { data: dataFromApi, isLoading } = useQuery({
-    queryKey: ["getPokemon", pokemonFromInput.label],
-    queryFn: () => getPokemon(),
+  // Only fetch species data for base Pokemon (for varieties list)
+  const getPokemonSpecies = (): Promise<PokemonSpecies | undefined> => {
+    return PokeApi.pokemon
+      .getPokemonSpeciesByName(pokemonFromInput.label)
+      .then((data) => data)
+      .catch((error) => {
+        console.error(error)
+        return undefined
+      })
+  }
+
+  const { data: basePokemonData, isLoading } = useQuery({
+    queryKey: ["getBasePokemon", pokemonFromInput.label],
+    queryFn: () => getBasePokemon(),
     refetchOnWindowFocus: false,
   })
 
-  const data = dataFromApi || pokemonData
+  const { data: speciesData } = useQuery({
+    queryKey: ["getPokemonSpecies", pokemonFromInput.label],
+    queryFn: () => getPokemonSpecies(),
+    refetchOnWindowFocus: false,
+  })
+
+  // Reset selected form when Pokemon changes
+  useEffect(() => {
+    setSelectedForm(undefined)
+  }, [pokemonFromInput.label])
 
   const imgRef = useRef<HTMLImageElement | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
@@ -103,60 +125,53 @@ function ColorSwitcherContent() {
   )
 
   const animationMapKey =
-    animationMap[pokemonFromInput.label as TPokemonAnimationKey]
+    animationMap[activePokemonName as TPokemonAnimationKey]
 
-  const { width } = useWindowDimensions()
-  const leftPaddingForContent =
-    typeof window !== "undefined"
-      ? width >= 1460
-        ? width > 1512
-          ? `${166 + (width - 1512) / 2}px`
-          : "166px"
-        : undefined
-      : "0px"
+  const [pokemonColorData, setPokemonColorData] = useState<IPokemonColorsResponseData | undefined>(undefined)
 
   useEffect(() => {
     const img = new Image()
     imgRef.current = img
   }, [])
 
-  useEffect(() => {
-    if (pokemonData && pokemonData.name === pokemonFromInput.label) {
-      setIsAbsoluteLoading(true)
-      if (imgRef.current) {
-        if (pokemonData.sprites.front_default) {
-          imgRef.current.src = pokemonData.sprites.front_shiny
-            ? showShinySprite
-              ? getShinyPokemonSprites(
-                  pokemonData.id,
-                  animationMapKey,
-                  pokemonData.sprites.front_shiny
-                )
-              : pokemonData.sprites.front_default
-            : pokemonData.sprites.front_default
+  const fetchPokemonColors = useCallback(async (isShiny: boolean) => {
+    setIsAbsoluteLoading(true)
+    const pokemonName = pokemonNameToQueryableName(activePokemonName)
+    api.get<IPokemonColorsResponseData>(`/pokemon-colors/${pokemonName}?shiny=${isShiny}`)
+      .then((response) => {
+        setPokemonColorData(response.data)
+        if (imgRef.current) {
+          const folder = response.data.isShiny ? 'shiny' : 'normal'
+          const spritePath = `/sprites/${folder}/${response.data.filename}`
+          imgRef.current.src = spritePath
+          imgRef.current.crossOrigin = "anonymous"
         }
-      }
-      if (imgRef.current) {
-        imgRef.current.crossOrigin = "anonymous"
-      }
-    }
-  }, [
-    pokemonData,
-    animationMapKey,
-    imgRef.current,
-    showShinySprite,
-    pokemonFromInput.label,
-  ])
+        // Extract hex colors from API response
+        const hexColors = response.data.colors.map(c => c.color)
+        setExtractedColors(hexColors)
+        // Pre-populate color mappings with all extracted colors
+        const initialMappings = hexColors.map((color) => ({
+          original: color,
+          replacement: color,
+        }))
+        setColorMappings(initialMappings)
+        window.setTimeout(() => setIsAbsoluteLoading(false), 500)
+      })
+      .catch((error) => {
+        console.error(error)
+        setPokemonColorData(undefined)
+        setIsAbsoluteLoading(false)
+      })
+  }, [activePokemonName])
 
-  if (imgRef.current) {
-    imgRef.current.onerror = () => {
-      if (showShinySprite && data && imgRef.current) {
-        imgRef.current.src = data.sprites.front_shiny!
-      }
-    }
-  }
+  useEffect(() => {
+    fetchPokemonColors(showShinySprite)
+  }, [activePokemonName, showShinySprite, fetchPokemonColors])
 
-  if (imgRef.current) {
+  // Handle image load for cropping (sprite image still needs cropping for display)
+  useEffect(() => {
+    if (!imgRef.current) return
+
     imgRef.current.onload = async () => {
       const img = imgRef.current
       if (!img) return
@@ -166,82 +181,8 @@ function ColorSwitcherContent() {
       } catch (error) {
         console.error("Error cropping image:", error)
       }
-
-      const canvas = document.createElement("canvas")
-      const ctx = canvas.getContext("2d")!
-
-      canvas.width = img.width
-      canvas.height = img.height
-      ctx.drawImage(img, 0, 0, img.width, img.height)
-
-      const imageData = ctx.getImageData(0, 0, img.width, img.height).data
-      const colorCount: Record<string, number> = {}
-
-      const roundColor = (value: number, precision: number) =>
-        Math.round(value / precision) * precision
-
-      const isSurroundedByTransparent = (x: number, y: number): boolean => {
-        const index = (y * img.width + x) * 4
-        if (imageData[index + 3] === 0) return true
-
-        const neighborOffsets = [
-          [-1, 0],
-          [1, 0],
-          [0, -1],
-          [0, 1],
-        ]
-
-        for (const [dx, dy] of neighborOffsets) {
-          const nx = x + dx
-          const ny = y + dy
-
-          if (nx >= 0 && nx < img.width && ny >= 0 && ny < img.height) {
-            const ni = (ny * img.width + nx) * 4
-            const alpha = imageData[ni + 3]
-            if (alpha === 0) return true
-          }
-        }
-
-        return false
-      }
-
-      for (let y = 0; y < img.height; y++) {
-        for (let x = 0; x < img.width; x++) {
-          const index = (y * img.width + x) * 4
-          const r = roundColor(imageData[index], 1)
-          const g = roundColor(imageData[index + 1], 1)
-          const b = roundColor(imageData[index + 2], 1)
-          const a = imageData[index + 3]
-
-          if (a === 0) continue
-          const brightness = (r + g + b) / 3
-          if (brightness < 26.5) continue
-
-          if (isSurroundedByTransparent(x, y) && brightness < 35) continue
-
-          const color = `${r},${g},${b}`
-          colorCount[color] = (colorCount[color] || 0) + 1
-        }
-      }
-
-      const sortedColors = Object.keys(colorCount)
-        .sort((a, b) => colorCount[b] - colorCount[a])
-        .slice(0, 20)
-        .map((color) => {
-          const [r, g, b] = color.split(",").map(Number)
-          return rgbToHex(r, g, b)
-        })
-
-      setExtractedColors(sortedColors)
-      // Pre-populate color mappings with all extracted colors
-      const initialMappings = sortedColors.map((color) => ({
-        original: color,
-        replacement: color,
-      }))
-      setColorMappings(initialMappings)
-      window.setTimeout(() => setIsAbsoluteLoading(false), 500)
     }
-  }
+  }, [pokemonFromInput.label])
 
   const applyColorChanges = useCallback(async () => {
     if (!imgRef.current || !canvasRef.current || colorMappings.length === 0)
@@ -251,8 +192,33 @@ function ColorSwitcherContent() {
     const ctx = canvas.getContext("2d")!
     const img = imgRef.current
 
-    canvas.width = img.width
-    canvas.height = img.height
+    // Check if image is fully loaded and has valid dimensions
+    if (!img.complete || img.naturalWidth === 0 || img.naturalHeight === 0) {
+      console.warn("Image not loaded yet, waiting...")
+      // Wait for image to load using addEventListener (doesn't overwrite existing onload)
+      await new Promise<void>((resolve) => {
+        const handleLoad = () => {
+          img.removeEventListener("load", handleLoad)
+          resolve()
+        }
+        img.addEventListener("load", handleLoad)
+        // If already complete, resolve immediately
+        if (img.complete && img.naturalWidth > 0) {
+          img.removeEventListener("load", handleLoad)
+          resolve()
+        }
+      })
+    }
+
+    // Use naturalWidth/Height for actual image dimensions
+    canvas.width = img.naturalWidth || img.width
+    canvas.height = img.naturalHeight || img.height
+    
+    if (canvas.width === 0 || canvas.height === 0) {
+      console.error("Cannot apply color changes: image has no dimensions")
+      return
+    }
+    
     ctx.drawImage(img, 0, 0)
 
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
@@ -333,19 +299,34 @@ function ColorSwitcherContent() {
     }
   }
 
+  const downloadModifiedSprite = useCallback(() => {
+    if (!modifiedImageUrl) return
+
+    const link = document.createElement("a")
+    link.href = modifiedImageUrl
+    link.download = `${activePokemonName}${showShinySprite ? "-shiny" : ""}-modified.png`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }, [modifiedImageUrl, activePokemonName, showShinySprite])
+
   const removeColorMapping = (index: number) => {
     setColorMappings(colorMappings.filter((_, i) => i !== index))
   }
 
-  const updateColorMapping = (
-    index: number,
-    field: "original" | "replacement",
-    value: string
-  ) => {
-    const newMappings = [...colorMappings]
-    newMappings[index][field] = value
-    setColorMappings(newMappings)
-  }
+  const updateColorMapping = useRef(
+    throttle((
+      index: number,
+      field: "original" | "replacement",
+      value: string
+    ) => {
+      setColorMappings(prev => {
+        const newMappings = [...prev];
+        newMappings[index][field] = value;
+        return newMappings;
+      });
+    }, 50, { leading: false, trailing: true })
+  ).current
 
   const backgroundColor =
     extractedColors.length > 0 ? extractedColors[0] : "#D0CFCF"
@@ -378,7 +359,10 @@ function ColorSwitcherContent() {
   return (
     <div className={styles.app} style={style}>
       <header className={styles.appHeader}>
-        <PokeballAndLogo />
+        <div style={{ display: "flex", alignItems: "center", width: "100%", justifyContent: "space-between" }}>
+          <PokeballAndLogo />
+          <SettingsMenu className={styles.settingsIcon} iconColor="black" />
+        </div>
         <div className={styles.pokemonTeamAndComboboxWrapper}>
           <div className={styles.comboboxContainer}>
             <Autocomplete
@@ -520,7 +504,6 @@ function ColorSwitcherContent() {
       </header>
       <div
         className={styles.contentContainer}
-        style={{ paddingLeft: leftPaddingForContent }}
       >
         {isAnythingLoading ? (
           <div
@@ -537,9 +520,9 @@ function ColorSwitcherContent() {
           <>
             <div className={styles.contentContainerTopSection}>
               <div className={styles.pokemonName}>
-                {data?.name.replaceAll("-", " ")}
+                {activePokemonName.replaceAll("-", " ")}
               </div>
-              <Button
+              {!pokemonFormsWithNoShinySprite.includes(activePokemonName) && <Button
                 id="toggleShinyButton"
                 onClick={() => {
                   setShowShinySprite(!showShinySprite)
@@ -572,7 +555,89 @@ function ColorSwitcherContent() {
                     }}
                   />
                 )}
-              </Button>
+              </Button>}
+              {speciesData &&
+                basePokemonData &&
+                (speciesData.varieties.length > 1 ||
+                  basePokemonData.forms.length > 1) &&
+                shouldHaveFormSelector(pokemonFromInput.label) && (
+                  <FormControl sx={{ ml: "25px", minWidth: 120 }}>
+                    <Select
+                      value={selectedForm ?? basePokemonData?.name}
+                      sx={{
+                        color: "inherit",
+                        "& .MuiOutlinedInput-notchedOutline": {
+                          borderColor: "inherit",
+                        },
+                        "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                          borderColor: "inherit",
+                        },
+                        "&:hover .MuiOutlinedInput-notchedOutline": {
+                          borderColor: "inherit",
+                        },
+                      }}
+                    >
+                      {speciesData?.varieties.map((v) => {
+                        const parsedFormName = v.pokemon.name
+                          .split(`${pokemonFromInput.label.toLowerCase()}-`)
+                          .slice(1)
+                        return (
+                          parsedFormName[0] !== "totem" &&
+                          !pokemonFormsToExclude.includes(v.pokemon.name) && (
+                            <MenuItem
+                              key={v.pokemon.name}
+                              onClick={() => {
+                                if (v.is_default) {
+                                  setSelectedForm(undefined)
+                                } else {
+                                  setSelectedForm(v.pokemon.name)
+                                }
+                              }}
+                              style={{ textTransform: "capitalize" }}
+                              value={v.pokemon.name}
+                            >
+                              {v.is_default ? "Default" : parsedFormName} Form
+                            </MenuItem>
+                          )
+                        )
+                      })}
+                      {(
+                        ((basePokemonData?.forms ?? []).length
+                          ? // we're excluding the default form from the forms list
+                            basePokemonData?.forms.slice(1)
+                          : basePokemonData?.forms) ?? []
+                      ).map((f, idx) => (
+                        !pokemonFormsToExclude.includes(f.name) && (
+                          <MenuItem
+                            key={f.name}
+                            onClick={() => {
+                              if (
+                                idx === 0 &&
+                                !(basePokemonData?.forms ?? []).length
+                              ) {
+                                setSelectedForm(undefined)
+                              } else {
+                                setSelectedForm(f.name)
+                              }
+                            }}
+                            style={{ textTransform: "capitalize" }}
+                            value={f.name}
+                          >
+                            {idx === 0 && !(basePokemonData?.forms ?? []).length
+                              ? "Default"
+                              : f.name
+                                  .split(
+                                    `${pokemonFromInput.label.toLowerCase()}-`
+                                  )
+                                  .slice(1)}{" "}
+                            Form
+                          </MenuItem>
+                          )
+                        )
+                      )}
+                    </Select>
+                  </FormControl>
+                )}
             </div>
             <div className={styles.mainContent}>
               <div className={styles.spriteSection}>
@@ -605,6 +670,25 @@ function ColorSwitcherContent() {
                       />
                     )
                   )}
+                  {modifiedImageUrl && (
+                    <Button
+                      onClick={downloadModifiedSprite}
+                      variant="outlined"
+                      startIcon={<DownloadIcon />}
+                      sx={{
+                        mt: 2,
+                        color: "inherit",
+                        borderColor: "inherit",
+                        textTransform: "none",
+                        "&:hover": {
+                          borderColor: "inherit",
+                          backgroundColor: "rgba(255, 255, 255, 0.1)",
+                        },
+                      }}
+                    >
+                      Download
+                    </Button>
+                  )}
                 </div>
               </div>
               <div className={styles.controlsSection}>
@@ -635,7 +719,7 @@ function ColorSwitcherContent() {
                               "replacement",
                               e.target.value
                             )
-                          }
+                        }
                           className={styles.colorInput}
                         />
                         <span className={styles.colorCode}>

@@ -13,6 +13,7 @@ import {
 import { Button } from "@mui/material"
 import { GamePokemonCombobox } from "./GamePokemonCombobox"
 import PokeballAndLogo from "../components/PokeballAndLogo"
+import SettingsMenu from "../components/SettingsMenu"
 import {
   getContrastingBaseTextColor,
   getContrastingBrightness,
@@ -436,6 +437,12 @@ function GameContent() {
     <div className={styles.app} style={style}>
       <header className={styles.appHeader}>
         <PokeballAndLogo />
+        <SettingsMenu
+          className={styles.settingsIcon}
+          iconColor={getContrastingTextColor(colorData.at(3)?.color ?? "white")}
+          colorFormat={colorFormat}
+          setColorFormat={setColorFormat}
+        />
       </header>
 
       <div className={styles.contentContainer}>

@@ -30,25 +30,59 @@ const Footer: React.FC<{ shouldCenter?: boolean }> = ({ shouldCenter }) => {
       </div>
 
       <div className={styles.disclaimer}>
-        Disclaimer: This is a fan-made project and is not affiliated with,
-        endorsed, sponsored, or specifically approved by Nintendo, Game Freak,
-        or The Pokémon Company. All Pokémon content, including names, images,
-        and other associated media, are the property of their respective owners.
-      </div>
-
-      <div className={styles.credits}>
-        Credits: Portions of this website utilize assets and code from the
-        PokéRogue project, which is licensed under the AGPL-3.0 License. In
-        accordance with this license, the source code for this website is
-        available at:{" "}
+        PokeSwatch is not affiliated with Nintendo, Game Freak, or The Pokémon Company. 
+        Pokémon content is the property of their respective owners. Data from{" "}
+        <a
+          href="https://pokeapi.co/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className={styles.link}
+        >
+          PokeAPI
+        </a>,{" "}
+        sprites by{" "}
+        <a
+          href="https://www.deviantart.com/kingofthe-x-roads"
+          target="_blank"
+          rel="noopener noreferrer"
+          className={styles.link}
+        >
+          KingOfThe-X-Roads
+        </a>,{" "}
+        <a
+          href="https://www.youtube.com/@RetroNC"
+          target="_blank"
+          rel="noopener noreferrer"
+          className={styles.link}
+        >
+          RetroNC
+        </a>, and{" "}
+        <a
+          href="https://www.smogon.com/forums/threads/smogon-sprite-project.3647722/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className={styles.link}
+        >
+          Smogon Sprite Project
+        </a> 
+        , and assets from{" "}
+        <a
+          href="https://github.com/pagefaultgames/pokerogue-assets"
+          target="_blank"
+          rel="noopener noreferrer"
+          className={styles.link}
+        >
+          PokéRogue 
+        </a> (AGPL-3.0 License).
+        Source:{" "}
         <a
           href="https://github.com/pjung16/pokeswatch"
           target="_blank"
           rel="noopener noreferrer"
-          className={styles.githubLink}
+          className={styles.link}
         >
           https://github.com/pjung16/pokeswatch
-        </a>
+        </a>  
       </div>
 
       <div className={styles.copyright}>

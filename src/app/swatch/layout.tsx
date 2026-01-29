@@ -1,15 +1,13 @@
 "use client"
 
-import { Button, Menu, MenuItem, ListSubheader } from "@mui/material"
 import classNames from "classnames"
 import React from "react"
 import styles from "./styles.module.css"
-import { useRouter } from "next/navigation"
-import SettingsIcon from "@mui/icons-material/Settings"
 import ShuffleIcon from "@mui/icons-material/Shuffle"
 import { SwatchPageProvider, useSwatchPageContext } from "./SwatchPageContext"
 import Link from "next/link"
 import PokeballAndLogo from "../components/PokeballAndLogo"
+import SettingsMenu from "../components/SettingsMenu"
 
 export default function SwatchLayout({
   children,
@@ -24,18 +22,8 @@ export default function SwatchLayout({
 }
 
 function SwatchInnerLayout({ children }: { children: React.ReactNode }) {
-  const router = useRouter()
   const { colorFormat, setColorFormat, showAnimations, setShowAnimations } =
     useSwatchPageContext()
-
-  const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null)
-  const open = Boolean(anchorEl)
-  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-    setAnchorEl(event.currentTarget)
-  }
-  const handleClose = () => {
-    setAnchorEl(null)
-  }
 
   const style: React.CSSProperties = {
     ["--color1" as any]: "#e54545",
@@ -95,52 +83,14 @@ function SwatchInnerLayout({ children }: { children: React.ReactNode }) {
           >
             🍕
           </a>
-          <Button
-            id="basic-button"
+          <SettingsMenu
             className={styles.settingsIconSwatchPage}
-            aria-controls={open ? "basic-menu" : undefined}
-            aria-haspopup="true"
-            aria-expanded={open ? "true" : undefined}
-            onClick={handleClick}
-            size="small"
-            disableRipple
-          >
-            <SettingsIcon fontSize="inherit" htmlColor="black" />
-          </Button>
-          <Menu
-            id="basic-menu"
-            anchorEl={anchorEl}
-            open={open}
-            onClose={handleClose}
-            transformOrigin={{
-              vertical: -10,
-              horizontal: 85,
-            }}
-            MenuListProps={{
-              "aria-labelledby": "basic-button",
-            }}
-            sx={{
-              padding: "50px",
-            }}
-          >
-            <ListSubheader>Color Format</ListSubheader>
-            <MenuItem onClick={() => setColorFormat("hex")}>Hex</MenuItem>
-            <MenuItem
-              onClick={() => {
-                setColorFormat("rgb")
-              }}
-            >
-              RGB
-            </MenuItem>
-            <MenuItem onClick={() => setColorFormat("hsl")}>HSL</MenuItem>
-            <MenuItem onClick={() => setColorFormat("hsv")}>HSV</MenuItem>
-            <ListSubheader>Show Animations</ListSubheader>
-            <MenuItem
-              onClick={() => setShowAnimations((prev: boolean) => !prev)}
-            >
-              {showAnimations ? "Hide" : "Show"}
-            </MenuItem>
-          </Menu>
+            iconColor="black"
+            colorFormat={colorFormat}
+            setColorFormat={setColorFormat}
+            showAnimations={showAnimations}
+            setShowAnimations={setShowAnimations}
+          />
         </div>
       </header>
       <div>{children}</div>
