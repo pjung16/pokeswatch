@@ -513,6 +513,7 @@ export const pokemonFormsToExclude = [
   "pikachu-starter",
   "eevee-starter",
   "greninja-ash",
+  "zygarde-10",
 
   // Megas with no sprites yet
   // remove these when we have the sprites
