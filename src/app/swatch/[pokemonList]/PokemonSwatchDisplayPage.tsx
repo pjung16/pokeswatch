@@ -269,7 +269,7 @@ function PokemonTeamPage() {
                     ))}
                   </div>
                   <DeleteIcon
-                    onClick={(e: React.MouseEvent<HTMLDivElement>) => {
+                    onClick={(e: React.MouseEvent<SVGSVGElement>) => {
                       e.stopPropagation()
                       deleteSwatch(swatch.id)
                     }}
