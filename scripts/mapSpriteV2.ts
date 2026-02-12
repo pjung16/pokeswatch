@@ -143,7 +143,7 @@ sortedPokemon.forEach(p => {
 });
 
 // Now extract packed positions
-const results = [];
+const results: PokemonColorData[] = [];
 
 const MAX_NUDGE = 120; // px max influence
 const PULL = 0.25;     // 0 = none, 1 = aggressive
