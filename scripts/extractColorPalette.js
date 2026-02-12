@@ -308,6 +308,138 @@ function extractBaseIdFromAnimationKey(animationKey) {
   return match ? parseInt(match[1], 10) : null;
 }
 
+// ============================================================================
+// ZA MEGAS (Legends ZA) - local sprites from src/app/sprites/
+// ============================================================================
+
+const ZA_MEGAS_START_ID = 10278;
+const ZA_MEGAS_END_ID = 10325;
+const SPRITES_DIR = path.join(APP_DIR, 'sprites');
+
+/**
+ * Get local file path for a ZA mega sprite (format: {id}.png)
+ */
+function getZaMegaLocalPath(pokemonId, isShiny) {
+  const folder = isShiny ? 'shiny' : 'normal';
+  return path.join(SPRITES_DIR, folder, `${pokemonId}.png`);
+}
+
+/**
+ * Get ZA mega Pokemon from pokemon-id-map (IDs 10278-10325, starting with clefable-mega).
+ * Returns list of { name, id, isShiny } — no url/source; images come from local sprites.
+ */
+function getZaMegaPokemon(options = {}) {
+  const { includeShiny = true } = options;
+  const pokemon = [];
+
+  for (const [name, id] of Object.entries(pokemonIdMap)) {
+    const pokemonId = typeof id === 'string' ? parseInt(id, 10) : id;
+    if (pokemonId < ZA_MEGAS_START_ID || pokemonId > ZA_MEGAS_END_ID) continue;
+
+    pokemon.push({ name, id: pokemonId, isShiny: false });
+    if (includeShiny) {
+      pokemon.push({ name, id: pokemonId, isShiny: true });
+    }
+  }
+
+  return pokemon.sort((a, b) => {
+    if (a.id !== b.id) return a.id - b.id;
+    return a.isShiny ? 1 : -1;
+  });
+}
+
+/**
+ * Process a single ZA mega using local sprite. Skips if file missing.
+ */
+async function processPokemonZaMega(pokemon, options = {}) {
+  const { verbose = false } = options;
+  const isShiny = pokemon.isShiny || false;
+  const localPath = getZaMegaLocalPath(pokemon.id, isShiny);
+
+  try {
+    if (!fs.existsSync(localPath)) {
+      if (verbose) {
+        const label = isShiny ? ' [SHINY]' : '';
+        console.log(`  Skipping ${pokemon.name}${label} (${pokemon.id}): no local sprite`);
+      }
+      return null; // skip
+    }
+
+    if (verbose) {
+      const label = isShiny ? ' [SHINY]' : '';
+      console.log(`  Reading local ${pokemon.name}${label}: ${localPath}`);
+    }
+
+    const imageBuffer = fs.readFileSync(localPath);
+    const palette = await extractColorPaletteFromImage(imageBuffer, {
+      pokemonId: pokemon.id,
+    });
+
+    return {
+      id: pokemon.id,
+      name: pokemon.name,
+      isShiny,
+      source: 'za-megas-local',
+      url: '',
+      palette: palette.palette,
+      primaryColors: palette.primaryColors,
+      hexColors: palette.hexColors,
+      rgbColors: palette.rgbColors,
+      dimensions: palette.dimensions,
+      success: true,
+    };
+  } catch (error) {
+    return {
+      id: pokemon.id,
+      name: pokemon.name,
+      isShiny,
+      source: 'za-megas-local',
+      url: '',
+      error: error.message,
+      success: false,
+    };
+  }
+}
+
+/**
+ * Process all ZA megas from local sprites. Skips variants with no file.
+ */
+async function processAllPokemonZaMegas(options = {}) {
+  const { includeShiny = true, shinyOnly = false, concurrency = 5, verbose = false } = options;
+
+  let list = getZaMegaPokemon({ includeShiny });
+  if (shinyOnly) list = list.filter((p) => p.isShiny);
+
+  const toProcess = [];
+  for (const p of list) {
+    const localPath = getZaMegaLocalPath(p.id, p.isShiny);
+    if (fs.existsSync(localPath)) toProcess.push(p);
+  }
+
+  const skipped = list.length - toProcess.length;
+  console.log(`Processing ${toProcess.length} ZA megas from local sprites (${skipped} skipped, no file)...`);
+
+  const results = [];
+  let processed = 0;
+
+  for (let i = 0; i < toProcess.length; i += concurrency) {
+    const batch = toProcess.slice(i, i + concurrency);
+    const batchResults = await Promise.all(
+      batch.map((p) => processPokemonZaMega(p, { verbose }))
+    );
+
+    for (const r of batchResults) {
+      if (r !== null) results.push(r);
+    }
+    processed += batch.length;
+    const ok = batchResults.filter((r) => r && r.success).length;
+    const fail = batchResults.filter((r) => r && !r.success).length;
+    console.log(`  [${processed}/${toProcess.length}] Batch: ${ok} ok, ${fail} failed`);
+  }
+
+  return results;
+}
+
 /**
  * Get all Pokemon to process (includes both normal and shiny variants)
  * Combines pokemon-id-map-object.json and animationMap.json to ensure no forms are missed
@@ -446,17 +578,100 @@ async function fetchImageWithFallback(primaryUrl, fallbackUrls = []) {
 }
 
 /**
+ * Crop transparent and white pixels from image edges (matches frontend cropWhitespace in image.js)
+ * Trims: fully transparent (alpha === 0), near-transparent (alpha < 16), and near-white padding (r,g,b >= 248).
+ * Returns a buffer of the cropped PNG, or the original buffer if cropping fails/skips.
+ * @param {Buffer} imageBuffer - Raw image buffer (PNG)
+ * @returns {Promise<Buffer>} Cropped image buffer
+ */
+async function cropWhitespace(imageBuffer) {
+  let sharp;
+  try {
+    sharp = require('sharp');
+  } catch (e) {
+    return imageBuffer;
+  }
+
+  const { data, info } = await sharp(imageBuffer)
+    .raw()
+    .ensureAlpha()
+    .toBuffer({ resolveWithObject: true });
+
+  const { width, height, channels } = info;
+  const pixels = data;
+  const hasAlpha = channels >= 4;
+
+  function isEmpty(i) {
+    const r = pixels[i];
+    const g = pixels[i + 1];
+    const b = pixels[i + 2];
+    const a = hasAlpha ? pixels[i + 3] : 255;
+    // Transparent or near-transparent
+    if (a < 16) return true;
+    // Near-white padding (common in sprite sources)
+    if (r >= 248 && g >= 248 && b >= 248) return true;
+    return false;
+  }
+
+  let top = height;
+  let bottom = -1;
+  let left = width;
+  let right = -1;
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const i = (y * width + x) * channels;
+      if (!isEmpty(i)) {
+        if (y < top) top = y;
+        if (y > bottom) bottom = y;
+        if (x < left) left = x;
+        if (x > right) right = x;
+      }
+    }
+  }
+
+  if (bottom < top || right < left) {
+    return imageBuffer;
+  }
+
+  const croppedWidth = right - left + 1;
+  const croppedHeight = bottom - top + 1;
+
+  if (croppedWidth <= 0 || croppedHeight <= 0) {
+    return imageBuffer;
+  }
+
+  const croppedBuffer = await sharp(imageBuffer)
+    .extract({ left, top, width: croppedWidth, height: croppedHeight })
+    .png()
+    .toBuffer();
+
+  return croppedBuffer;
+}
+
+/**
  * Save image buffer to local file
  */
 async function saveImageToFile(buffer, filePath) {
   const dir = path.dirname(filePath);
-  
+
   // Create directory if it doesn't exist
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
-  
+
   fs.writeFileSync(filePath, buffer);
+}
+
+function getFilename(pokemonName, pokemonId) {
+  // Check if this is a form with a shared base ID
+  if (isFormWithSharedId(pokemonName, pokemonId)) {
+    const baseName = speciesMap[pokemonId];
+    const formSuffix = getFormSuffix(pokemonName, baseName);
+    return `${pokemonId}${formSuffix}.png`;
+  } else {
+    return `${pokemonId}.png`;
+  }
 }
 
 /**
@@ -467,15 +682,7 @@ async function saveImageToFile(buffer, filePath) {
 function getLocalImagePath(downloadDir, pokemonName, pokemonId, isShiny) {
   const shinyFolder = isShiny ? 'shiny' : 'normal';
   
-  // Check if this is a form with a shared base ID
-  let filename;
-  if (isFormWithSharedId(pokemonName, pokemonId)) {
-    const baseName = speciesMap[pokemonId];
-    const formSuffix = getFormSuffix(pokemonName, baseName);
-    filename = `${pokemonId}${formSuffix}.png`;
-  } else {
-    filename = `${pokemonId}.png`;
-  }
+  const filename = getFilename(pokemonName, pokemonId);
   
   return path.join(downloadDir, shinyFolder, filename);
 }
@@ -1456,11 +1663,12 @@ async function processPokemon(pokemon, options = {}) {
       console.log(`    Fallback used: ${usedUrl}`);
     }
     
-    // Save image to local file if download directory is specified
+    // Save image to local file if download directory is specified (cropped first)
     let localPath = null;
     if (downloadDir) {
       localPath = getLocalImagePath(downloadDir, pokemon.name, pokemon.id, isShiny);
-      await saveImageToFile(imageBuffer, localPath);
+      const bufferToSave = await cropWhitespace(imageBuffer);
+      await saveImageToFile(bufferToSave, localPath);
       if (verbose) {
         console.log(`    Saved to: ${localPath}`);
       }
@@ -1619,6 +1827,7 @@ Options:
   --verbose        Show detailed progress
   --debug          Show debug output for URL selection (for forms with ID >= 10000)
   --test           Run a quick test of URL selection logic for key Pokemon
+  --za-megas       Use local ZA mega sprites from src/app/sprites/ (IDs 10278-10325)
   --help           Show this help message
 
 Examples:
@@ -1627,6 +1836,7 @@ Examples:
   node extractColorPalette.js --pokemon=pikachu         # Single Pokemon (normal + shiny)
   node extractColorPalette.js --no-shiny                # Normal only, no shinies
   node extractColorPalette.js --shiny-only              # Shiny only
+  node extractColorPalette.js --za-megas                # ZA megas from local sprites only
   node extractColorPalette.js --output=palettes.json    # Save to file
   node extractColorPalette.js --download=./sprites      # Download images to ./sprites folder
   node extractColorPalette.js --test                    # Test URL selection logic
@@ -1685,18 +1895,27 @@ Examples:
   if (downloadDir) {
     console.log(`Images will be saved to: ${path.resolve(downloadDir)}`);
   }
-  
+
+  // ZA megas: use local sprites from src/app/sprites/, skip PokeAPI/PokeRogue
+  const zaMegas = options['za-megas'] || false;
+
   try {
-    const results = await processAllPokemon({
-      start: options.start ? parseInt(options.start, 10) : 1,
-      end: options.end ? parseInt(options.end, 10) : Infinity,
-      pokemonName: options.pokemon,
-      includeShiny,
-      shinyOnly,
-      concurrency: options.concurrency ? parseInt(options.concurrency, 10) : 5,
-      verbose: options.verbose,
-      downloadDir
-    });
+    const results = zaMegas
+      ? await processAllPokemonZaMegas({
+          includeShiny,
+          concurrency: options.concurrency ? parseInt(options.concurrency, 10) : 5,
+          verbose: options.verbose,
+        })
+      : await processAllPokemon({
+          start: options.start ? parseInt(options.start, 10) : 1,
+          end: options.end ? parseInt(options.end, 10) : Infinity,
+          pokemonName: options.pokemon,
+          includeShiny,
+          shinyOnly,
+          concurrency: options.concurrency ? parseInt(options.concurrency, 10) : 5,
+          verbose: options.verbose,
+          downloadDir,
+        });
     
     const successful = results.filter(r => r.success);
     const failed = results.filter(r => !r.success);
@@ -1776,6 +1995,7 @@ if (require.main === module) {
 module.exports = {
   // Main functions
   processAllPokemon,
+  processAllPokemonZaMegas,
   processPokemon,
   extractColorPaletteFromImage,
   
@@ -1799,6 +2019,9 @@ module.exports = {
   // Image fetching (with fallback support)
   fetchImage,
   fetchImageWithFallback,
+
+  // Filename utilities
+  getFilename,
   
   // Special cases map (for reference/modification)
   specialPokemonCases,

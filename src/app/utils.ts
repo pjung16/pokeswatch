@@ -513,6 +513,7 @@ export const pokemonFormsToExclude = [
   "pikachu-starter",
   "eevee-starter",
   "greninja-ash",
+  "zygarde-10",
 
   // Megas with no sprites yet
   // remove these when we have the sprites
@@ -574,11 +575,7 @@ export const pokemonFormsWithNoShinySprite = [
   "chimecho-mega",
   "garchomp-mega-z",
   "lucario-mega-z",
-  "darkrai-mega",
   "golurk-mega",
-  "meowstic-m-mega",
-  "meowstic-f-mega",
-  "meowstic-mega",
   "crabominable-mega",
   "golisopod-mega",
   "zeraora-mega",

@@ -272,6 +272,13 @@
   margin-bottom: 20px;
 }
 
+.swatchSelectorContainer {
+  display: flex;
+  gap: 12px;
+  padding: 0 70px;
+  margin-bottom: 24px;
+}
+
 @container swatchColorContainer (max-width: 142px) {
   .swatchInfoContainer {
     flex-direction: column-reverse;
@@ -289,5 +296,11 @@
   .footer {
     padding: 20px 20px;
     font-size: 12px;
+  }
+}
+
+@media only screen and (max-width: 550px) {
+  .swatchSelectorContainer {
+    padding: 0 12px;
   }
 }

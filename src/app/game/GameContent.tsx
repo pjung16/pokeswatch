@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import React, { useCallback, useEffect, useRef, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { MainClient, Pokemon } from "pokenode-ts"
 import {
@@ -29,51 +29,9 @@ import { TColorData, TColorFormat, TPokemon } from "../types"
 import species from "../species.json"
 import styles from "./styles.module.css"
 import Footer from "../components/Footer"
-
-// More sophisticated randomization using multiple hash rounds
-const hashString = (str: string): number => {
-  let hash = 0
-  for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i)
-    hash = (hash << 5) - hash + char
-    hash = hash & hash // Convert to 32-bit integer
-  }
-  return Math.abs(hash)
-}
-
-// Generate a daily random Pokemon based on the current UTC date
-const getDailyPokemon = (): { label: string; id: number } => {
-  const today = new Date()
-  const dateString = `${today.getUTCFullYear()}-${String(
-    today.getUTCMonth() + 1
-  ).padStart(2, "0")}-${String(today.getUTCDate()).padStart(2, "0")}`
-
-  // Create a more complex seed by hashing the date string multiple times
-  let seed = hashString(dateString)
-  seed = hashString(seed.toString() + "pokemon")
-  seed = hashString(seed.toString() + "daily")
-
-  // Use the seed to generate a random index with better distribution
-  const speciesEntries = Object.entries(species)
-  const randomIndex = seed % speciesEntries.length
-
-  // Apply additional randomization by shuffling based on the seed
-  const shuffledEntries = [...speciesEntries]
-  for (let i = shuffledEntries.length - 1; i > 0; i--) {
-    const j = (seed + i * 2654435761) % (i + 1) // Use a different multiplier for each position
-    ;[shuffledEntries[i], shuffledEntries[j]] = [
-      shuffledEntries[j],
-      shuffledEntries[i],
-    ]
-  }
-
-  const [pokemonName, pokemonId] = shuffledEntries[randomIndex]
-
-  return {
-    label: pokemonName,
-    id: pokemonId as number,
-  }
-}
+import api from "../api/api"
+import { useAuth } from "../hooks/useAuth"
+import type { DailyGameResponse, UserDailyGameResponse } from "../../types/dailyGame"
 
 // Generate a random Pokemon for practice mode
 const getRandomPokemon = (): { label: string; id: number } => {
@@ -106,40 +64,127 @@ function GameContent() {
     id: number
   } | null>(null)
   const [isInverted, setIsInverted] = useState<boolean>(false)
+  const [dailyGameId, setDailyGameId] = useState<string | null>(null)
+  const [hasSubmitted, setHasSubmitted] = useState<boolean>(false)
 
-  const dailyPokemon = useMemo(() => getDailyPokemon(), [])
-  const api = new MainClient()
+  const { isAuthenticated, login } = useAuth()
+  const pokeApi = new MainClient()
 
   const autocompleteOptions = speciesToOptions(species)
 
   const imgRef = useRef<HTMLImageElement | null>(null)
 
-  // Initialize current Pokemon and check daily completion
+  // Fetch today's daily game from backend
+  const { data: dailyGameData, isLoading: isDailyGameLoading } = useQuery({
+    queryKey: ["dailyGame"],
+    queryFn: async () => {
+      const response = await api.get<DailyGameResponse>("/daily-game/today")
+      return response.data
+    },
+    refetchOnWindowFocus: false,
+    retry: 2,
+  })
+
+  // Fetch user's result for today's game (only if authenticated)
+  const { data: myDailyResult, isLoading: isMyResultLoading } = useQuery({
+    queryKey: ["dailyGameMyResult"],
+    queryFn: async () => {
+      const response = await api.get<UserDailyGameResponse>(
+        "/daily-game/today/me"
+      )
+      return response.data
+    },
+    refetchOnWindowFocus: false,
+    enabled: isAuthenticated,
+    retry: false,
+  })
+
+  // Initialize image ref
   useEffect(() => {
     const img = new Image()
     imgRef.current = img
+  }, [])
 
-    // Check if daily game was completed today (UTC)
-    const today = new Date()
-    const todayUTC = `${today.getUTCFullYear()}-${String(
-      today.getUTCMonth() + 1
-    ).padStart(2, "0")}-${String(today.getUTCDate()).padStart(2, "0")}`
-    const completedDate = localStorage.getItem("dailyGameCompleted")
-    if (completedDate === todayUTC) {
-      setDailyCompleted(true)
+  // Set daily pokemon from backend response
+  useEffect(() => {
+    if (dailyGameData && gameMode === "daily") {
+      setCurrentPokemon({
+        label: dailyGameData.pokemonName,
+        id: dailyGameData.pokemonId,
+      })
+      setDailyGameId(dailyGameData.id)
     }
+  }, [dailyGameData, gameMode])
 
-    // Set initial Pokemon based on game mode
-    if (gameMode === "daily") {
-      setCurrentPokemon(dailyPokemon)
-    } else {
+  // Set practice pokemon when switching to practice mode
+  useEffect(() => {
+    if (gameMode === "practice") {
       setCurrentPokemon(getRandomPokemon())
     }
-  }, [gameMode, dailyPokemon])
+  }, [gameMode])
+
+  // Check daily completion — backend result for authenticated users, localStorage for guests
+  useEffect(() => {
+    if (isAuthenticated && myDailyResult) {
+      // User already played today via backend
+      setDailyCompleted(true)
+      setAttempts(myDailyResult.guesses)
+      setGameState(myDailyResult.won ? "won" : "lost")
+      setHasSubmitted(true)
+    } else if (!isAuthenticated) {
+      // Fallback to localStorage for unauthenticated users
+      const today = new Date()
+      const todayUTC = `${today.getUTCFullYear()}-${String(
+        today.getUTCMonth() + 1
+      ).padStart(2, "0")}-${String(today.getUTCDate()).padStart(2, "0")}`
+      const completedDate = localStorage.getItem("dailyGameCompleted")
+      if (completedDate === todayUTC) {
+        setDailyCompleted(true)
+      }
+    }
+  }, [isAuthenticated, myDailyResult])
+
+  // After sign-in, submit any pending game result that was saved before OAuth redirect
+  useEffect(() => {
+    if (!isAuthenticated || !dailyGameId || hasSubmitted) return
+    const pendingRaw = localStorage.getItem("pendingDailyGameResult")
+    if (!pendingRaw) return
+
+    try {
+      const pending = JSON.parse(pendingRaw) as {
+        gameId: string
+        won: boolean
+        guesses: number
+      }
+      // Only submit if the pending result matches today's game
+      if (pending.gameId === dailyGameId) {
+        api
+          .post(`/daily-game/${dailyGameId}/submit`, {
+            won: pending.won,
+            guesses: pending.guesses,
+          })
+          .then(() => {
+            setHasSubmitted(true)
+            setDailyCompleted(true)
+            setAttempts(pending.guesses)
+            setGameState(pending.won ? "won" : "lost")
+            localStorage.removeItem("pendingDailyGameResult")
+          })
+          .catch((error) => {
+            console.error("Failed to submit pending game result:", error)
+          })
+      } else {
+        // Stale pending result from a different day, clean it up
+        localStorage.removeItem("pendingDailyGameResult")
+      }
+    } catch {
+      localStorage.removeItem("pendingDailyGameResult")
+    }
+  }, [isAuthenticated, dailyGameId, hasSubmitted])
 
   const getPokemon = (): Promise<Pokemon> => {
     if (!currentPokemon) throw new Error("No Pokemon selected")
-    return api.pokemon
+    return pokeApi.pokemon
       .getPokemonByName(pokemonNameToQueryableName(currentPokemon.label))
       .then((data) => data)
       .catch((_) => {
@@ -306,6 +351,35 @@ function GameContent() {
     }
   }, [currentPokemon?.id])
 
+  // Save pending result to localStorage and redirect to sign in
+  const handleSignInToSave = useCallback(() => {
+    if (dailyGameId && gameMode === "daily") {
+      localStorage.setItem(
+        "pendingDailyGameResult",
+        JSON.stringify({
+          gameId: dailyGameId,
+          won: gameState === "won",
+          guesses: attempts,
+        })
+      )
+    }
+    login()
+  }, [dailyGameId, gameMode, gameState, attempts, login])
+
+  // Submit game result to backend (for authenticated users in daily mode)
+  const submitGameResult = useCallback(
+    async (won: boolean, guesses: number) => {
+      if (!isAuthenticated || !dailyGameId || gameMode !== "daily" || hasSubmitted) return
+      try {
+        await api.post(`/daily-game/${dailyGameId}/submit`, { won, guesses })
+        setHasSubmitted(true)
+      } catch (error) {
+        console.error("Failed to submit game result:", error)
+      }
+    },
+    [isAuthenticated, dailyGameId, gameMode, hasSubmitted]
+  )
+
   const handleGuess = useCallback(
     (pokemonName: string) => {
       if (!pokemonName.trim() || gameState !== "playing" || !currentPokemon)
@@ -314,21 +388,40 @@ function GameContent() {
       const normalizedGuess = pokemonName.toLowerCase().trim()
       const normalizedAnswer = currentPokemon.label.toLowerCase()
 
-      setAttempts((prev) => prev + 1)
+      const newAttempts = attempts + 1
+      setAttempts(newAttempts)
 
       if (normalizedGuess === normalizedAnswer) {
         setGameState("won")
-        // Mark daily game as completed if in daily mode
+        // Mark daily game as completed
         if (gameMode === "daily") {
-          const today = new Date()
-          const todayUTC = `${today.getUTCFullYear()}-${String(
-            today.getUTCMonth() + 1
-          ).padStart(2, "0")}-${String(today.getUTCDate()).padStart(2, "0")}`
-          localStorage.setItem("dailyGameCompleted", todayUTC)
           setDailyCompleted(true)
+          // Submit to backend if authenticated, otherwise use localStorage
+          if (isAuthenticated) {
+            submitGameResult(true, newAttempts)
+          } else {
+            const today = new Date()
+            const todayUTC = `${today.getUTCFullYear()}-${String(
+              today.getUTCMonth() + 1
+            ).padStart(2, "0")}-${String(today.getUTCDate()).padStart(2, "0")}`
+            localStorage.setItem("dailyGameCompleted", todayUTC)
+          }
         }
-      } else if (attempts + 1 >= maxAttempts) {
+      } else if (newAttempts >= maxAttempts) {
         setGameState("lost")
+        // Mark daily game as completed (loss)
+        if (gameMode === "daily") {
+          setDailyCompleted(true)
+          if (isAuthenticated) {
+            submitGameResult(false, newAttempts)
+          } else {
+            const today = new Date()
+            const todayUTC = `${today.getUTCFullYear()}-${String(
+              today.getUTCMonth() + 1
+            ).padStart(2, "0")}-${String(today.getUTCDate()).padStart(2, "0")}`
+            localStorage.setItem("dailyGameCompleted", todayUTC)
+          }
+        }
       } else {
         // Trigger color inversion for wrong guess
         setIsInverted(true)
@@ -336,11 +429,11 @@ function GameContent() {
 
         // Add hint based on attempt number
         const newHints = [...hints]
-        if (attempts === 1 && pokemonData) {
+        if (newAttempts === 2 && pokemonData) {
           newHints.push(
             `Type: ${pokemonData.types.map((t) => t.type.name).join(", ")}`
           )
-        } else if (attempts === 3 && pokemonData) {
+        } else if (newAttempts === 4 && pokemonData) {
           newHints.push(
             `Generation: ${
               pokemonData.id <= 151
@@ -374,6 +467,8 @@ function GameContent() {
       currentPokemon,
       pokemonData,
       gameMode,
+      isAuthenticated,
+      submitGameResult,
     ]
   )
 
@@ -382,6 +477,7 @@ function GameContent() {
     setAttempts(0)
     setHints([])
     setIsInverted(false)
+    setHasSubmitted(false)
     // Generate new Pokemon for practice mode, keep daily Pokemon for daily mode
     if (gameMode === "practice") {
       setCurrentPokemon(getRandomPokemon())
@@ -395,16 +491,32 @@ function GameContent() {
     setAttempts(0)
     setHints([])
     setIsInverted(false)
+    setHasSubmitted(false)
   }, [])
 
   const switchToDailyMode = useCallback(() => {
     setGameMode("daily")
-    setCurrentPokemon(dailyPokemon)
-    setGameState("playing")
-    setAttempts(0)
+    // Set pokemon from backend data if available
+    if (dailyGameData) {
+      setCurrentPokemon({
+        label: dailyGameData.pokemonName,
+        id: dailyGameData.pokemonId,
+      })
+      setDailyGameId(dailyGameData.id)
+    }
+    // If user already completed today, restore that state
+    if (isAuthenticated && myDailyResult) {
+      setGameState(myDailyResult.won ? "won" : "lost")
+      setAttempts(myDailyResult.guesses)
+      setDailyCompleted(true)
+      setHasSubmitted(true)
+    } else {
+      setGameState("playing")
+      setAttempts(0)
+    }
     setHints([])
     setIsInverted(false)
-  }, [dailyPokemon])
+  }, [dailyGameData, isAuthenticated, myDailyResult])
 
   const baseFontColor = getContrastingBaseTextColor(
     colorData.at(0)?.color ?? "#ffffff"
@@ -526,7 +638,7 @@ function GameContent() {
           </div>
         </div>
 
-        {isLoading ? (
+        {isLoading || (gameMode === "daily" && isDailyGameLoading) ? (
           <div className={styles.loading}>
             <div className={styles.pokeball}>
               <div className={styles.top}></div>
@@ -543,6 +655,51 @@ function GameContent() {
                 {gameState === "won" && "🎉 Congratulations! You guessed it!"}
                 {gameState === "lost" && "😞 Game Over! Try again next time!"}
               </div>
+              {(gameState === "won" || gameState === "lost") &&
+                !isAuthenticated &&
+                gameMode === "daily" && (
+                  <div
+                    style={{
+                      marginTop: "8px",
+                      padding: "10px 16px",
+                      borderRadius: "8px",
+                      backgroundColor: `${colorData.at(1)?.color ?? "#7A7D7D"}30`,
+                      border: `1px solid ${colorData.at(1)?.color ?? "#7A7D7D"}60`,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      flexWrap: "wrap",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <span style={{ fontSize: "0.9em", opacity: 0.9 }}>
+                      Sign in to save your progress and track your stats!
+                    </span>
+                    <Button
+                      onClick={handleSignInToSave}
+                      variant="contained"
+                      size="small"
+                      sx={{
+                        backgroundColor: colorData.at(1)?.color ?? "#7A7D7D",
+                        color: getContrastingTextColor(
+                          colorData.at(1)?.color ?? "#7A7D7D"
+                        ),
+                        textTransform: "none",
+                        fontWeight: 600,
+                        fontSize: "0.85em",
+                        padding: "4px 16px",
+                        "&:hover": {
+                          backgroundColor: colorData.at(2)?.color ?? "#565254",
+                          color: getContrastingTextColor(
+                            colorData.at(2)?.color ?? "#565254"
+                          ),
+                        },
+                      }}
+                    >
+                      Sign in with Google
+                    </Button>
+                  </div>
+                )}
             </div>
 
             {hints.length > 0 && (
@@ -671,7 +828,7 @@ function GameContent() {
               </div>
             </div>
 
-            {(gameState === "won" || gameState === "lost") && (
+            {(gameState === "won" || gameState === "lost") && gameMode === "practice" && (
               <div className={styles.playAgainSection}>
                 <Button
                   onClick={resetGame}
@@ -686,9 +843,7 @@ function GameContent() {
                     },
                   }}
                 >
-                  {gameMode === "daily"
-                    ? "Play Again Tomorrow"
-                    : "New Practice Round"}
+                  New Practice Round
                 </Button>
               </div>
             )}
