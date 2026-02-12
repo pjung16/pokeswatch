@@ -122,7 +122,7 @@ const pokemonFromApiToColorData = async(pokemon: IPokemonColorsResponseData[]): 
 // Sort Pokémon by color axis (white-left → dark-right)
 const sortedPokemon = (await pokemonFromApiToColorData(pokemonFromApi.data.data)).sort((a, b) => a.bandIndex - b.bandIndex)
 // Create the packer
-const packer = new MaxRectsPacker(canvasWidth, canvasHeight, gap, { smart: true, logic: 2 });
+const packer = new MaxRectsPacker(canvasWidth, canvasHeight, gap, { smart: true, logic: 1 });
 
 const SPACING = 10; // 👈 controls how airy the layout feels
 
