@@ -148,7 +148,7 @@ export default function AtlasPageClient() {
     const capitalizedText = text.split(" ").map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" ")
 
     ctx.save()
-    ctx.setTransform(1, 0, 0, 1, 0, 0) // draw in canvas pixel space
+    ctx.setTransform(1, 0, 0, 1, 0, 0) // draw in raw canvas pixel space
 
     ctx.font = "36px Inconsolata, monospace, system-ui, sans-serif"
     ctx.textBaseline = "top"
@@ -158,8 +158,27 @@ export default function AtlasPageClient() {
     const boxWidth = Math.max(swatchWidth, textWidth) + padding * 2
     const boxHeight = 180 + padding * 2
 
-    const x = mouseX + 30
-    const y = mouseY + 10
+    // All coordinates here are in raw canvas pixels
+    const cw = ctx.canvas.width
+    const ch = ctx.canvas.height
+    const margin = 20
+
+    // Default: tooltip to the right and below cursor
+    let x = mouseX + 30
+    let y = mouseY + 10
+
+    // Flip horizontally if overflowing right
+    if (x + boxWidth > cw - margin) {
+      x = mouseX - boxWidth - 30
+    }
+    // Flip vertically if overflowing bottom
+    if (y + boxHeight > ch - margin) {
+      y = mouseY - boxHeight - 10
+    }
+
+    // Final hard clamp
+    x = Math.max(margin, Math.min(x, cw - boxWidth - margin))
+    y = Math.max(margin, Math.min(y, ch - boxHeight - margin))
 
     // background
     ctx.fillStyle = p.data.colorHex
@@ -304,6 +323,75 @@ export default function AtlasPageClient() {
   
     canvas.addEventListener("mouseup", () => { isPanning = false; });
     canvas.addEventListener("mouseleave", () => { isPanning = false; });
+
+    // --- Touch events for panning and pinch-to-zoom ---
+    let lastTouchDist = 0;
+
+    canvas.addEventListener("touchstart", (e) => {
+      e.preventDefault();
+      if (e.touches.length === 1) {
+        isPanning = true;
+        panStartOffsetX = targetOffsetX;
+        panStartOffsetY = targetOffsetY;
+        panStartClientX = e.touches[0].clientX;
+        panStartClientY = e.touches[0].clientY;
+      } else if (e.touches.length === 2) {
+        isPanning = false;
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        lastTouchDist = Math.hypot(dx, dy);
+      }
+    }, { passive: false });
+
+    canvas.addEventListener("touchmove", (e) => {
+      e.preventDefault();
+      if (e.touches.length === 1 && isPanning) {
+        const viewW = canvas.width / dpr;
+        const viewH = canvas.height / dpr;
+        const minOX = viewW - (boundsMaxX + PAD) * targetScale;
+        const maxOX = (PAD - boundsMinX) * targetScale;
+        const minOY = viewH - (boundsMaxY + PAD) * targetScale;
+        const maxOY = (PAD - boundsMinY) * targetScale;
+        const rawX = panStartOffsetX + (e.touches[0].clientX - panStartClientX) * panSensitivity;
+        const rawY = panStartOffsetY + (e.touches[0].clientY - panStartClientY) * panSensitivity;
+        targetOffsetX = Math.max(minOX, Math.min(maxOX, rawX));
+        targetOffsetY = Math.max(minOY, Math.min(maxOY, rawY));
+      } else if (e.touches.length === 2) {
+        // Pinch-to-zoom
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        const dist = Math.hypot(dx, dy);
+        if (lastTouchDist > 0) {
+          const viewH = canvas.height / dpr;
+          const minScale = viewH / (boundsHeight + 2 * PAD);
+
+          const scaleChange = (dist - lastTouchDist) * 0.005;
+          let newScale = targetScale + scaleChange;
+          if (newScale < minScale) newScale = minScale;
+          if (newScale <= 0) return;
+
+          // Zoom toward midpoint of the two fingers
+          const rect = canvas.getBoundingClientRect();
+          const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left;
+          const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top;
+          const scaleRatio = newScale / targetScale;
+          targetOffsetX = midX - (midX - targetOffsetX) * scaleRatio;
+          targetOffsetY = midY - (midY - targetOffsetY) * scaleRatio;
+
+          targetScale = newScale;
+        }
+        lastTouchDist = dist;
+      }
+    }, { passive: false });
+
+    canvas.addEventListener("touchend", (e) => {
+      if (e.touches.length < 2) {
+        lastTouchDist = 0;
+      }
+      if (e.touches.length === 0) {
+        isPanning = false;
+      }
+    });
   
     // --- Wheel for zooming ---
     canvas.addEventListener("wheel", (e) => {
@@ -379,7 +467,7 @@ export default function AtlasPageClient() {
 
       ctx.restore();
 
-      // Draw tooltip in canvas pixel space (after restore so no transform)
+      // Draw tooltip in raw canvas pixel space (after restore so no transform)
       if (hovered) {
         drawTooltip(ctx, hovered, mouseCanvasX * dpr, mouseCanvasY * dpr);
       }
@@ -497,6 +585,7 @@ export default function AtlasPageClient() {
           minHeight: "calc(100vh - 100px)",
           position: "relative",
           overflow: "hidden",
+          touchAction: "none",
         }}
       >
       </div>

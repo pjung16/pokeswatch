@@ -249,11 +249,12 @@ function PokemonTeamPage() {
               if (!selected) return null
               return (
                 <div style={{ display: "flex", width: "100%", height: "40px", justifyContent: "space-evenly" }}>
-                  {selected.pokemon.map((pokemon, idx) => (
-                    <div key={`${pokemon.pokemonName}-${idx}`} style={{ width: "100%", display: "flex", justifyContent: "center", alignItems: "center", backgroundColor: pokemon.colors[0].color }}>
-                      <div style={{ background: getPokemonIcon(pokemon.pokemonName.replaceAll("-", "")), width: "40px", height: "30px", imageRendering: "pixelated", transform: "scale(1.2)" }} />
+                  {selected.pokemon.map((pokemon, idx) => {
+                    const pokemonName = Object.keys(pokemonWithHyphens).find(key => key === pokemon.pokemonName.replaceAll("-", "")) ? pokemon.pokemonName : pokemon.pokemonName.replaceAll("-", "")
+                    return <div key={`${pokemon.pokemonName}-${idx}`} style={{ width: "100%", display: "flex", justifyContent: "center", alignItems: "center", backgroundColor: pokemon.colors[0].color }}>
+                      <div style={{ background: getPokemonIcon(pokemonName), width: "40px", height: "30px", imageRendering: "pixelated", transform: "scale(1.2)" }} />
                     </div>
-                  ))}
+                  })}
                 </div>
               )
             }}
@@ -262,11 +263,12 @@ function PokemonTeamPage() {
               return (
                 <MenuItem key={swatch.id} value={swatch.id}>
                   <div style={{ display: "flex", width: "100%", height: "40px", justifyContent: "space-evenly" }}>
-                    {swatch.pokemon.map((pokemon, idx) => (
-                      <div key={`${pokemon.pokemonName}-${idx}`} style={{ width: "100%", display: "flex", justifyContent: "center", alignItems: "center", backgroundColor: pokemon.colors[0].color }}>
-                        <div style={{ background: getPokemonIcon(pokemon.pokemonName.replaceAll("-", "")), width: "40px", height: "30px", imageRendering: "pixelated", transform: "scale(1.2)" }} />
+                    {swatch.pokemon.map((pokemon, idx) => {
+                      const pokemonName = Object.keys(pokemonWithHyphens).find(key => key === pokemon.pokemonName.replaceAll("-", "")) ? pokemon.pokemonName : pokemon.pokemonName.replaceAll("-", "")
+                      return <div key={`${pokemon.pokemonName}-${idx}`} style={{ width: "100%", display: "flex", justifyContent: "center", alignItems: "center", backgroundColor: pokemon.colors[0].color }}>
+                        <div style={{ background: getPokemonIcon(pokemonName), width: "40px", height: "30px", imageRendering: "pixelated", transform: "scale(1.2)" }} />
                       </div>
-                    ))}
+                    })}
                   </div>
                   <DeleteIcon
                     onClick={(e: React.MouseEvent<SVGSVGElement>) => {
