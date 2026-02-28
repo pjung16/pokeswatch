@@ -12,6 +12,363 @@
   transition: all 0.2s ease-in-out !important;
 }
 
+.atlasInfoCard {
+  position: absolute;
+  right: 16px;
+  top: 16px;
+  width: 340px;
+  height: calc(100% - 32px);
+  border-radius: 12px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.22);
+  z-index: 10;
+  backdrop-filter: blur(6px);
+  max-height: calc(100% - 32px);
+  overflow-y: auto;
+}
+
+.atlasInfoCardLoaderWrap {
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.atlasInfoCardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.atlasInfoCardTitle {
+  margin: 0;
+  font-size: 22px;
+}
+
+.atlasInfoCardClose {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.atlasInfoCardSpriteWrap {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 12px;
+  min-height: 96px;
+}
+
+.atlasInfoCardSprite {
+  image-rendering: pixelated;
+  height: 160px;
+  width: auto;
+  margin-bottom: 30px;
+}
+
+.atlasInfoCardMessage {
+  font-size: 13px;
+  color: #555;
+  margin-bottom: 12px;
+}
+
+.atlasInfoCardError {
+  font-size: 13px;
+  color: #9b2c2c;
+  margin-bottom: 12px;
+}
+
+.atlasInfoCardSection {
+  font-size: 13px;
+  color: #333;
+  margin-bottom: 12px;
+}
+
+.atlasInfoCardTypes {
+  display: flex;
+  gap: 3px;
+  margin-bottom: 30px;
+  align-items: center;
+  justify-content: start;
+  flex-wrap: wrap;
+}
+
+.atlasInfoCardStats {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  row-gap: 4px;
+}
+
+.atlasInfoCardStatRow {
+  display: flex;
+}
+
+.atlasInfoCardStatLabel {
+  text-align: left;
+  width: 90px;
+}
+
+.atlasInfoCardStatBar {
+  width: 180px;
+}
+
+.atlasInfoCardStatFill {
+  height: 100%;
+  border: 1px solid;
+  max-width: 180px;
+  min-height: 12px;
+}
+
+.atlasInfoCardTotalRow {
+  display: flex;
+  width: 100%;
+  margin-top: 6px;
+}
+
+.atlasInfoCardTotal {
+  text-align: left;
+  width: 180px;
+}
+
+.atlasInfoCardPaletteTitle {
+  margin-bottom: 10px;
+  font-size: 13px;
+  color: #555;
+}
+
+.atlasInfoCardPaletteGrid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.atlasInfoCardPaletteSwatch {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.atlasInfoCardPaletteLabel {
+  margin-top: 4px;
+  font-size: 10px;
+  text-align: center;
+  color: #555;
+}
+
+.atlasInfoCardButton {
+  display: block;
+  width: 100%;
+  margin-top: 14px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  text-align: center;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 13px;
+  transition: filter 0.2s ease-in-out;
+}
+
+.atlasInfoCardButton:hover {
+  filter: brightness(1.15);
+}
+
+.pokeball {
+  border: 0.2em solid #000;
+  border-radius: 100%;
+  box-sizing: content-box;
+  font-size: 16px;
+  height: 4em;
+  margin: 15px;
+  overflow: hidden;
+  position: relative;
+  width: 4em;
+  background: white;
+  cursor: pointer;
+
+  & > .top {
+    border-bottom: 0.25em solid #000;
+    box-sizing: inherit;
+    height: 0;
+    padding-bottom: 0.9375em;
+    padding-top: 0.9375em;
+    position: relative;
+  }
+
+  & > .button {
+    background: #fff;
+    border: 0.2em solid #000;
+    border-radius: 100%;
+    box-sizing: inherit;
+    height: 1.2em;
+    left: 50%;
+    position: absolute;
+    top: 50%;
+    width: 1.2em;
+    transform: translate(-50%, -50%);
+
+    &::before {
+      border: 0px solid #888;
+      border-radius: 100%;
+      content: "";
+      height: 0.5em;
+      left: 50%;
+      position: absolute;
+      top: 50%;
+      width: 0.5em;
+      transform: translate(-50%, -50%);
+    }
+  }
+}
+
+.pbHyper {
+  .top {
+    background: var(--color2);
+    overflow: hidden;
+
+    &::before {
+      border-left: 1.35em solid var(--color1);
+      border-right: 1.35em solid var(--color3);
+      box-sizing: inherit;
+      content: "";
+      height: 2em;
+      left: 0;
+      position: absolute;
+      top: 0;
+      width: 1.35em;
+    }
+  }
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  50% {
+    border-top: 8px solid var(--color2);
+    border-bottom: 8px solid var(--color2);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.loader {
+  animation: spin 1s ease-in-out infinite;
+  border: 8px solid var(--color1);
+  border-top: 8px solid var(--color3);
+  border-bottom: 8px solid var(--color3);
+  border-radius: 50%;
+}
+
+.pokemonType {
+  color: rgb(243, 243, 243);
+  padding: 3px 8px;
+  margin-right: 5px;
+  text-transform: uppercase;
+  box-shadow: inset white 0px 0px 1px 1px;
+  font-weight: 700;
+  border-radius: 5px;
+}
+
+.normal {
+  background: #a8a878;
+  border: 1px solid #6d6d4e;
+}
+
+.fire {
+  background: #f08030;
+  border: 1px solid #9c531f;
+}
+
+.fighting {
+  background: #c03028;
+  border: 1px solid #7d1f1a;
+}
+
+.water {
+  background: #6890f0;
+  border: 1px solid #445e9c;
+}
+
+.flying {
+  background: #a890f0;
+  border: 1px solid #6d5e9c;
+}
+
+.grass {
+  background: #78c850;
+  border: 1px solid #4e8234;
+}
+
+.poison {
+  background: #a040a0;
+  border: 1px solid #682a68;
+}
+
+.electric {
+  background: #f8d030;
+  border: 1px solid #a1871f;
+}
+
+.ground {
+  background: #e0c068;
+  border: 1px solid #927d44;
+}
+
+.psychic {
+  background: #f85888;
+  border: 1px solid #a13959;
+}
+
+.rock {
+  background: #b8a038;
+  border: 1px solid #786824;
+}
+
+.ice {
+  background: #98d8d8;
+  border: 1px solid #638d8d;
+}
+
+.bug {
+  background: #a8b820;
+  border: 1px solid #6d7815;
+}
+
+.dragon {
+  background: #7038f8;
+  border: 1px solid #4924a1;
+}
+
+.ghost {
+  background: #705898;
+  border: 1px solid #493963;
+}
+
+.dark {
+  background: #705848;
+  border: 1px solid #49392f;
+}
+
+.steel {
+  background: #b8b8d0;
+  border: 1px solid #787887;
+}
+
+.fairy {
+  background: #ee99ac;
+  border: 1px solid #9b6470;
+}
+
 .settingsIcon:hover {
   filter: brightness(120%);
   transition: all 0.2s ease-in-out;

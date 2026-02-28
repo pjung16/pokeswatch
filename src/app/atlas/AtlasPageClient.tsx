@@ -1,5 +1,5 @@
 "use client"
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import positioned from "../positioned.json"
 import { useRouter } from "next/navigation"
 import speciesData from "../species.json"
@@ -9,6 +9,7 @@ import PokeballAndLogo from "../components/PokeballAndLogo"
 import SettingsMenu from "../components/SettingsMenu"
 import styles from "./styles.module.css"
 import Footer from "../components/Footer"
+import AtlasPokemonInfoCard from "./AtlasPokemonInfoCard"
 
 interface IPokemonSprite {
   data: {
@@ -28,8 +29,8 @@ interface IPokemonSprite {
 
 export default function AtlasPageClient() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const imageCacheRef = useRef<Record<string, HTMLImageElement>>({});
-  const backgroundImageRef = useRef<HTMLImageElement | null>(null);
+  const atlasImageRef = useRef<HTMLImageElement | null>(null);
+  const [selectedPokemon, setSelectedPokemon] = useState<IPokemonSprite | null>(null);
   const router = useRouter();
 
   // Helper to load an image (returns a promise)
@@ -42,61 +43,18 @@ export default function AtlasPageClient() {
     });
   }
 
-  async function drawAll(
-    offsetX: number,
-    offsetY: number
-  ) {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext("2d")!
-    const imageCache: Record<string, HTMLImageElement> = {};
-    const pokemonList = positioned;
-  
-    // Clear the canvas first
-    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-  
-    ctx.save(); // Save current state
-    ctx.translate(offsetX, offsetY); // Apply pan offset
-  
-    for (const p of pokemonList) {
-      if (!imageCache[p.data.name]) {
-        imageCache[p.data.name] = await loadImage(`/sprites/normal/${p.data.filename}`);
-      }
-  
-      ctx.drawImage(
-        imageCache[p.data.name],
-        p.x,
-        p.y,
-        p.width,
-        p.height
-      );
-    }
-  
-    ctx.restore(); // Restore state so translation doesn't accumulate
-  }
-
   useEffect(() => {
-    async function preloadImages() {
-      const cache: Record<string, HTMLImageElement> = {};
-      
-      // Load background image
-      const bgImg = await loadImage('/blurredColors.png');
-      backgroundImageRef.current = bgImg;
-      
-      await Promise.all(
-        positioned.map(async (p) => {
-          if (!cache[p.data.name ?? '']) {
-            const img = await loadImage(`/spritesForAtlas/normal/${p.data.filename}`);
-            cache[p.data.name ?? ''] = img;
-          }
-        })
-      );
-      imageCacheRef.current = cache;
-
-      drawAll(0, 0); // initial draw after all images loaded
+    let isMounted = true;
+    async function preloadAtlasImage() {
+      const atlasImg = await loadImage("/pokemonAtlas.png");
+      if (isMounted) {
+        atlasImageRef.current = atlasImg;
+      }
     }
-
-    preloadImages();
+    preloadAtlasImage();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   function hitTest(
@@ -297,10 +255,17 @@ export default function AtlasPageClient() {
     let scale = 1;
     let targetScale = 1;
     let hasInitialZoom = false;
+    let didMouseDrag = false;
+    let didTouchDrag = false;
+    let suppressNextClickFromTouch = false;
+    let touchStartClientX: number | null = null;
+    let touchStartClientY: number | null = null;
+    const dragThresholdPx = 4;
 
     // --- Mouse events for panning ---
     canvas.addEventListener("mousedown", (e) => {
       isPanning = true;
+      didMouseDrag = false;
       panStartOffsetX = targetOffsetX;
       panStartOffsetY = targetOffsetY;
       panStartClientX = e.clientX;
@@ -315,6 +280,11 @@ export default function AtlasPageClient() {
       const maxOX = (PAD - boundsMinX) * targetScale;
       const minOY = viewH - (boundsMaxY + PAD) * targetScale;
       const maxOY = (PAD - boundsMinY) * targetScale;
+      const movedX = e.clientX - panStartClientX;
+      const movedY = e.clientY - panStartClientY;
+      if (Math.hypot(movedX, movedY) > dragThresholdPx) {
+        didMouseDrag = true;
+      }
       const rawX = panStartOffsetX + (e.clientX - panStartClientX) * panSensitivity;
       const rawY = panStartOffsetY + (e.clientY - panStartClientY) * panSensitivity;
       targetOffsetX = Math.max(minOX, Math.min(maxOX, rawX));
@@ -331,12 +301,16 @@ export default function AtlasPageClient() {
       e.preventDefault();
       if (e.touches.length === 1) {
         isPanning = true;
+        didTouchDrag = false;
         panStartOffsetX = targetOffsetX;
         panStartOffsetY = targetOffsetY;
         panStartClientX = e.touches[0].clientX;
         panStartClientY = e.touches[0].clientY;
+        touchStartClientX = e.touches[0].clientX;
+        touchStartClientY = e.touches[0].clientY;
       } else if (e.touches.length === 2) {
         isPanning = false;
+        didTouchDrag = true;
         const dx = e.touches[0].clientX - e.touches[1].clientX;
         const dy = e.touches[0].clientY - e.touches[1].clientY;
         lastTouchDist = Math.hypot(dx, dy);
@@ -352,6 +326,11 @@ export default function AtlasPageClient() {
         const maxOX = (PAD - boundsMinX) * targetScale;
         const minOY = viewH - (boundsMaxY + PAD) * targetScale;
         const maxOY = (PAD - boundsMinY) * targetScale;
+        const movedX = e.touches[0].clientX - panStartClientX;
+        const movedY = e.touches[0].clientY - panStartClientY;
+        if (Math.hypot(movedX, movedY) > dragThresholdPx) {
+          didTouchDrag = true;
+        }
         const rawX = panStartOffsetX + (e.touches[0].clientX - panStartClientX) * panSensitivity;
         const rawY = panStartOffsetY + (e.touches[0].clientY - panStartClientY) * panSensitivity;
         targetOffsetX = Math.max(minOX, Math.min(maxOX, rawX));
@@ -385,12 +364,34 @@ export default function AtlasPageClient() {
     }, { passive: false });
 
     canvas.addEventListener("touchend", (e) => {
+      // Handle tap-to-select on touch, but ignore drag/pinch gestures.
+      if (e.touches.length === 0 && !didTouchDrag) {
+        const touch = e.changedTouches[0];
+        const touchClientX = touch?.clientX ?? touchStartClientX;
+        const touchClientY = touch?.clientY ?? touchStartClientY;
+        if (touchClientX !== null && touchClientY !== null) {
+          const rect = canvas.getBoundingClientRect();
+          const touchCanvasX = touchClientX - rect.left;
+          const touchCanvasY = touchClientY - rect.top;
+          const worldX = (touchCanvasX - offsetX) / scale;
+          const worldY = (touchCanvasY - offsetY) / scale;
+          const tapped = findHovered(positioned, worldX, worldY);
+          if (tapped) {
+            setSelectedPokemon(tapped);
+          }
+        }
+      }
+
       if (e.touches.length < 2) {
         lastTouchDist = 0;
       }
       if (e.touches.length === 0) {
         isPanning = false;
+        touchStartClientX = null;
+        touchStartClientY = null;
       }
+      suppressNextClickFromTouch = true;
+      didTouchDrag = false;
     });
   
     // --- Wheel for zooming ---
@@ -446,23 +447,21 @@ export default function AtlasPageClient() {
       ctx.translate(offsetX, offsetY);
       ctx.scale(scale, scale);
 
-      // Draw background image covering the sprite bounds area
-      const bgImg = backgroundImageRef.current;
-      if (bgImg) {
+      // Draw full atlas image instead of fetching individual sprites/background.
+      const atlasImg = atlasImageRef.current;
+      if (atlasImg) {
+        // `pokemonAtlas.png` includes outer atlas padding, so align it to world bounds + PAD.
+        const atlasWorldX = boundsMinX - PAD;
+        const atlasWorldY = boundsMinY - PAD;
+        const atlasWorldW = boundsWidth + PAD * 2;
+        const atlasWorldH = boundsHeight + PAD * 2;
         ctx.drawImage(
-          bgImg,
-          boundsMinX,
-          boundsMinY,
-          boundsWidth,
-          boundsHeight
+          atlasImg,
+          atlasWorldX,
+          atlasWorldY,
+          atlasWorldW,
+          atlasWorldH
         );
-      }
-
-      for (const p of positioned) {
-        const img = imageCacheRef.current[p.data.name ?? ''];
-        if (img) {
-          ctx.drawImage(img, p.x, p.y, p.width, p.height);
-        }
       }
 
       ctx.restore();
@@ -477,7 +476,7 @@ export default function AtlasPageClient() {
     let mouseCanvasX = 0;
     let mouseCanvasY = 0;
 
-    canvas.addEventListener("dblclick", (e: MouseEvent) => {
+    const handleDoubleClick = () => {
       if (hovered) {
         const pokemonName = queryableNameToPokemonName(hovered.data.name);
         if (!speciesData.hasOwnProperty(pokemonName)) {
@@ -487,7 +486,25 @@ export default function AtlasPageClient() {
           router.push(`/pokemon/${pokemonName}`);
         }
       }
-    });
+    };
+    canvas.addEventListener("dblclick", handleDoubleClick);
+
+    const handleClick = () => {
+      // Touch interactions synthesize a click event; ignore it.
+      if (suppressNextClickFromTouch) {
+        suppressNextClickFromTouch = false;
+        return;
+      }
+      // Ignore click-select when the user dragged to pan.
+      if (didMouseDrag) {
+        didMouseDrag = false;
+        return;
+      }
+      // Keep the current card open when clicking empty canvas.
+      if (!hovered) return;
+      setSelectedPokemon(hovered);
+    };
+    canvas.addEventListener("click", handleClick);
 
     canvas.addEventListener("mousemove", (e: MouseEvent) => {
       const rect = canvas.getBoundingClientRect();
@@ -555,11 +572,8 @@ export default function AtlasPageClient() {
     // --- Cleanup ---
     return () => {
       resizeObserver.disconnect();
-      canvas.removeEventListener("mousedown", () => {});
-      canvas.removeEventListener("mousemove", () => {});
-      canvas.removeEventListener("mouseup", () => {});
-      canvas.removeEventListener("mouseleave", () => {});
-      canvas.removeEventListener("wheel", () => {});
+      canvas.removeEventListener("dblclick", handleDoubleClick);
+      canvas.removeEventListener("click", handleClick);
       cancelAnimationFrame(animationFrameId);
       container?.removeChild(canvas);
     };
@@ -574,9 +588,11 @@ export default function AtlasPageClient() {
   return (
     <div style={style}>
       <header style={{ display: "flex", alignItems: "center", width: "100%", justifyContent: "space-between" }}>
-          <PokeballAndLogo />
+        <PokeballAndLogo />
+        <div>
           <SettingsMenu className={styles.settingsIcon} iconColor="black" />
-        </header>
+        </div>
+      </header>
       <div
         id="atlas-page-client"
         style={{
@@ -588,6 +604,10 @@ export default function AtlasPageClient() {
           touchAction: "none",
         }}
       >
+        <AtlasPokemonInfoCard
+          selectedPokemon={selectedPokemon}
+          onClose={() => setSelectedPokemon(null)}
+        />
       </div>
       <Footer shouldCenter />
     </div>
