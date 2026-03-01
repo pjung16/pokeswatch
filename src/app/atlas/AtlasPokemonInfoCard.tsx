@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { queryableNameToPokemonName, statToDisplay } from "../utils"
+import { getPokemonIcon, queryableNameToPokemonName, statToDisplay } from "../utils"
 import styles from "./styles.module.css"
 import Link from "next/link"
 import speciesData from "../species.json"
@@ -143,11 +143,18 @@ export default function AtlasPokemonInfoCard({
     ? `/pokemon/${pokemonName}`
     : `/pokemon/${pokemonName.split("-")[0]}?form=${pokemonName}`
 
+  const pokemonIcon = (() => {
+    const name = queryableNameToPokemonName(selectedPokemon.data.name);
+    const isBaseSpecies = (speciesData as Record<string, number>)[name] !== undefined;
+    return getPokemonIcon(isBaseSpecies ? name : name.replaceAll("-", ""));
+  })()
+
   return (
-    <div className={styles.atlasInfoCard} style={{ backgroundColor: `${selectedPokemon.data.allColors[0] ?? selectedPokemon.data.colorHex}f0` }}>
+    <div className={styles.atlasInfoCard} style={{ backgroundColor: `${selectedPokemon.data.allColors[0] ?? selectedPokemon.data.colorHex}CC` }}>
       <div className={styles.atlasInfoCardHeader}>
         <h3 className={styles.atlasInfoCardTitle} style={{ color: getContrastingTextColor(selectedPokemon.data.allColors[0] ?? selectedPokemon.data.colorHex) }}>
           {formatPokemonDisplayName(selectedPokemon.data.name)}
+          <div style={{ background: pokemonIcon, width: "40px", height: "30px", imageRendering: "pixelated", transform: "scale(1.2)", marginRight: "4px" }}></div>
         </h3>
         <button
           type="button"

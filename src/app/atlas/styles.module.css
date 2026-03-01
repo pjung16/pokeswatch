@@ -40,9 +40,13 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 10px;
+  gap: 14px;
 }
 
 .atlasInfoCardTitle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   margin: 0;
   font-size: 22px;
 }
@@ -397,7 +401,7 @@
   }
 
   .atlasSearchBar {
-    width: 200px;
+    width: calc(100% - 16px);
     left: 8px;
     top: 8px;
   }
