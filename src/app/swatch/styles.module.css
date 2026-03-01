@@ -231,6 +231,13 @@
   border: 2px solid #ffa1a1;
 }
 
+.downloadButtonSwatchPage {
+  border: 2px solid #ffb65c;
+  background: transparent;
+  font-family: inherit;
+  cursor: pointer;
+}
+
 .supportButton {
   background-color: #ffa1a1;
 }

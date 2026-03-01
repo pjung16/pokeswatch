@@ -144,9 +144,9 @@ export default function AtlasPokemonInfoCard({
     : `/pokemon/${pokemonName.split("-")[0]}?form=${pokemonName}`
 
   return (
-    <div className={styles.atlasInfoCard}>
+    <div className={styles.atlasInfoCard} style={{ backgroundColor: `${selectedPokemon.data.allColors[0] ?? selectedPokemon.data.colorHex}f0` }}>
       <div className={styles.atlasInfoCardHeader}>
-        <h3 className={styles.atlasInfoCardTitle}>
+        <h3 className={styles.atlasInfoCardTitle} style={{ color: getContrastingTextColor(selectedPokemon.data.allColors[0] ?? selectedPokemon.data.colorHex) }}>
           {formatPokemonDisplayName(selectedPokemon.data.name)}
         </h3>
         <button
@@ -193,7 +193,7 @@ export default function AtlasPokemonInfoCard({
               className={styles.atlasInfoCardSprite}
             />
           </div>
-          <div className={styles.atlasInfoCardStats}>
+          <div className={styles.atlasInfoCardStats} style={{ color: getContrastingTextColor(selectedPokemon.data.allColors[0] ?? selectedPokemon.data.colorHex) }}>
             {pokemonData.stats.map((statEntry) => (
               <div key={statEntry.stat.name} className={styles.atlasInfoCardStatRow}>
                 <div className={styles.atlasInfoCardStatLabel}>
@@ -207,7 +207,7 @@ export default function AtlasPokemonInfoCard({
                     style={{
                       width: `${(statEntry.base_stat / 255) * 100}%`,
                       backgroundColor:
-                        selectedPokemon.data.allColors[1] ??
+                        selectedPokemon.data.allColors[2] ??
                         selectedPokemon.data.colorHex,
                     }}
                   />
@@ -223,7 +223,7 @@ export default function AtlasPokemonInfoCard({
         </div>
       )}
 
-      <div className={styles.atlasInfoCardPaletteTitle}>
+      <div className={styles.atlasInfoCardPaletteTitle} style={{ color: getContrastingTextColor(selectedPokemon.data.allColors[0] ?? selectedPokemon.data.colorHex) }}>
         Palette
       </div>
       <div className={styles.atlasInfoCardPaletteGrid}>
@@ -233,9 +233,10 @@ export default function AtlasPokemonInfoCard({
               className={styles.atlasInfoCardPaletteSwatch}
               style={{
                 background: color,
+                border: `1px solid ${getContrastingTextColor(selectedPokemon.data.allColors[0])}`
               }}
             />
-            <div className={styles.atlasInfoCardPaletteLabel}>
+            <div className={styles.atlasInfoCardPaletteLabel} style={{ color: getContrastingTextColor(selectedPokemon.data.allColors[0]) }}>
               {color}
             </div>
           </div>
@@ -246,8 +247,8 @@ export default function AtlasPokemonInfoCard({
         href={pokemonHref}
         className={styles.atlasInfoCardButton}
         style={{
-          backgroundColor: selectedPokemon.data.allColors[0] ?? selectedPokemon.data.colorHex,
-          color:getContrastingTextColor(selectedPokemon.data.allColors[0] ?? selectedPokemon.data.colorHex)
+          backgroundColor: selectedPokemon.data.allColors[1] ?? selectedPokemon.data.colorHex,
+          color:getContrastingTextColor(selectedPokemon.data.allColors[1] ?? selectedPokemon.data.colorHex)
         }}
       >
         View Pokemon Page

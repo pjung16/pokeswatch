@@ -1,15 +1,16 @@
 "use client"
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState, useMemo, useCallback } from "react"
 import positioned from "../positioned.json"
 import { useRouter } from "next/navigation"
 import speciesData from "../species.json"
-import { queryableNameToPokemonName } from "../utils"
+import { queryableNameToPokemonName, getPokemonIcon } from "../utils"
 import { getContrastingBaseTextColor } from "../color"
 import PokeballAndLogo from "../components/PokeballAndLogo"
 import SettingsMenu from "../components/SettingsMenu"
 import styles from "./styles.module.css"
 import Footer from "../components/Footer"
 import AtlasPokemonInfoCard from "./AtlasPokemonInfoCard"
+import { Autocomplete, TextField } from "@mui/material"
 
 interface IPokemonSprite {
   data: {
@@ -27,11 +28,61 @@ interface IPokemonSprite {
   height: number;
 }
 
+interface AtlasSearchOption {
+  label: string;
+  name: string;
+  id: number;
+}
+
 export default function AtlasPageClient() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const atlasImageRef = useRef<HTMLImageElement | null>(null);
   const [selectedPokemon, setSelectedPokemon] = useState<IPokemonSprite | null>(null);
   const router = useRouter();
+  const panToRef = useRef<((pokemon: IPokemonSprite) => void) | null>(null);
+  const highlightedRef = useRef<IPokemonSprite | null>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchInput, setSearchInput] = useState("");
+
+  const atlasSearchOptions = useMemo(() => {
+    const seen = new Set<string>();
+    const options: AtlasSearchOption[] = [];
+    for (const p of positioned) {
+      if (seen.has(p.data.name)) continue;
+      seen.add(p.data.name);
+      const baseName = p.data.name.split("-")[0];
+      const dexId = (speciesData as Record<string, number>)[p.data.name]
+        ?? (speciesData as Record<string, number>)[baseName]
+        ?? 0;
+      const displayName = p.data.name
+        .replaceAll("-", " ")
+        .split(" ")
+        .map((w: string) => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(" ");
+      options.push({ label: displayName, name: p.data.name, id: dexId });
+    }
+    return options.sort((a, b) => a.id - b.id || a.name.localeCompare(b.name));
+  }, []);
+
+  const handleSelectPokemon = useCallback((pokemonName: string) => {
+    const pokemon = (positioned as IPokemonSprite[]).find(p => p.data.name === pokemonName);
+    if (pokemon) {
+      highlightedRef.current = pokemon;
+      panToRef.current?.(pokemon);
+      setSelectedPokemon(pokemon);
+      const url = new URL(window.location.href);
+      url.searchParams.set('pokemon', pokemon.data.name);
+      window.history.replaceState({}, '', url.toString());
+    }
+  }, []);
+
+  const handleClosePokemon = useCallback(() => {
+    highlightedRef.current = null;
+    setSelectedPokemon(null);
+    const url = new URL(window.location.href);
+    url.searchParams.delete('pokemon');
+    window.history.replaceState({}, '', url.toString());
+  }, []);
 
   // Helper to load an image (returns a promise)
   function loadImage(src: string): Promise<HTMLImageElement> {
@@ -377,7 +428,11 @@ export default function AtlasPageClient() {
           const worldY = (touchCanvasY - offsetY) / scale;
           const tapped = findHovered(positioned, worldX, worldY);
           if (tapped) {
+            highlightedRef.current = null;
             setSelectedPokemon(tapped);
+            const url = new URL(window.location.href);
+            url.searchParams.set('pokemon', tapped.data.name);
+            window.history.replaceState({}, '', url.toString());
           }
         }
       }
@@ -466,6 +521,28 @@ export default function AtlasPageClient() {
 
       ctx.restore();
 
+      const hl = highlightedRef.current;
+      if (hl) {
+        ctx.save();
+        ctx.scale(dpr, dpr);
+        const screenX = hl.x * scale + offsetX;
+        const screenY = hl.y * scale + offsetY;
+        const screenW = hl.width * scale;
+        const screenH = hl.height * scale;
+        const pad = 6;
+        const radius = 8;
+        const pulse = 0.5 + 0.5 * Math.sin(Date.now() * 0.005);
+
+        ctx.shadowColor = "rgba(0, 0, 0, 0.45)";
+        ctx.shadowBlur = 10;
+        ctx.strokeStyle = `rgba(255, 255, 255, ${0.55 + 0.45 * pulse})`;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.roundRect(screenX - pad, screenY - pad, screenW + pad * 2, screenH + pad * 2, radius);
+        ctx.stroke();
+        ctx.restore();
+      }
+
       // Draw tooltip in raw canvas pixel space (after restore so no transform)
       if (hovered) {
         drawTooltip(ctx, hovered, mouseCanvasX * dpr, mouseCanvasY * dpr);
@@ -502,7 +579,11 @@ export default function AtlasPageClient() {
       }
       // Keep the current card open when clicking empty canvas.
       if (!hovered) return;
+      highlightedRef.current = null;
       setSelectedPokemon(hovered);
+      const url = new URL(window.location.href);
+      url.searchParams.set('pokemon', hovered.data.name);
+      window.history.replaceState({}, '', url.toString());
     };
     canvas.addEventListener("click", handleClick);
 
@@ -521,6 +602,24 @@ export default function AtlasPageClient() {
       hovered = null;
     });
 
+    panToRef.current = (pokemon: IPokemonSprite) => {
+      const viewW = canvas.width / dpr;
+      const viewH = canvas.height / dpr;
+      const localMinScale = viewH / (boundsHeight + 2 * PAD);
+      const pokeCenterX = pokemon.x + pokemon.width / 2;
+      const pokeCenterY = pokemon.y + pokemon.height / 2;
+      const desiredPxSize = Math.min(viewW, viewH) * 0.15;
+      const pokeSize = Math.max(pokemon.width, pokemon.height);
+      const newScale = Math.max(desiredPxSize / pokeSize, localMinScale);
+      const infoCardSpace = viewW > 700 ? 186 : 0;
+      targetScale = newScale;
+      scale = newScale;
+      targetOffsetX = (viewW / 2 - infoCardSpace) - pokeCenterX * newScale;
+      offsetX = targetOffsetX;
+      targetOffsetY = viewH / 2 - pokeCenterY * newScale;
+      offsetY = targetOffsetY;
+    };
+
     // --- Animation frame loop ---
     let animationFrameId: number;
     const animate = () => {
@@ -534,11 +633,32 @@ export default function AtlasPageClient() {
         hasInitialZoom = true;
         scale = minScale;
         targetScale = minScale;
-        // Center the atlas in view
         targetOffsetX = (viewW - (boundsMinX + boundsMaxX) * minScale) / 2;
         targetOffsetY = (viewH - (boundsMinY + boundsMaxY) * minScale) / 2;
         offsetX = targetOffsetX;
         offsetY = targetOffsetY;
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const pokemonParam = urlParams.get('pokemon');
+        if (pokemonParam) {
+          const found = (positioned as IPokemonSprite[]).find(p => p.data.name === pokemonParam);
+          if (found) {
+            const pokeCenterX = found.x + found.width / 2;
+            const pokeCenterY = found.y + found.height / 2;
+            const desiredPxSize = Math.min(viewW, viewH) * 0.15;
+            const pokeSize = Math.max(found.width, found.height);
+            const zoomScale = Math.max(desiredPxSize / pokeSize, minScale);
+            const infoCardSpace = viewW > 700 ? 186 : 0;
+            targetScale = zoomScale;
+            scale = zoomScale;
+            targetOffsetX = (viewW / 2 - infoCardSpace) - pokeCenterX * zoomScale;
+            targetOffsetY = viewH / 2 - pokeCenterY * zoomScale;
+            offsetX = targetOffsetX;
+            offsetY = targetOffsetY;
+            highlightedRef.current = found;
+            setSelectedPokemon(found);
+          }
+        }
       }
 
       offsetX += (targetOffsetX - offsetX) * smoothing;
@@ -571,6 +691,7 @@ export default function AtlasPageClient() {
   
     // --- Cleanup ---
     return () => {
+      panToRef.current = null;
       resizeObserver.disconnect();
       canvas.removeEventListener("dblclick", handleDoubleClick);
       canvas.removeEventListener("click", handleClick);
@@ -604,9 +725,128 @@ export default function AtlasPageClient() {
           touchAction: "none",
         }}
       >
+        <div className={styles.atlasSearchBar}>
+          <Autocomplete
+            open={searchOpen && searchInput.length > 0}
+            onOpen={() => setSearchOpen(true)}
+            onClose={() => setSearchOpen(false)}
+            inputValue={searchInput}
+            onInputChange={(_, value, reason) => {
+              if (reason !== 'reset') {
+                setSearchInput(value);
+              }
+            }}
+            autoHighlight
+            options={atlasSearchOptions}
+            getOptionLabel={(option) => option.label}
+            filterOptions={(options, state) => {
+              const input = state.inputValue.toLowerCase();
+              if (!input) return [];
+              return options.filter(
+                (option) =>
+                  option.label.toLowerCase().includes(input) ||
+                  option.name.toLowerCase().includes(input) ||
+                  option.id.toString().includes(input)
+              );
+            }}
+            onChange={(_, value) => {
+              if (value) {
+                handleSelectPokemon(value.name);
+                setSearchInput("");
+              }
+            }}
+            isOptionEqualToValue={(option, value) => option.name === value.name}
+            noOptionsText="No Pokémon found"
+            blurOnSelect
+            slotProps={{
+              paper: {
+                sx: {
+                  borderRadius: "0px 0px 16px 16px",
+                  border: "1px solid rgba(0, 0, 0, 0.15)",
+                  borderTopWidth: "0px",
+                  boxShadow: "0 9px 8px -3px rgba(64, 60, 67, .24)",
+                },
+              },
+              listbox: {
+                sx: {
+                  maxHeight: 300,
+                  overflowY: "auto",
+                },
+              },
+              popper: {
+                modifiers: [{ name: "flip", enabled: false }],
+                placement: "bottom-start" as const,
+              },
+            }}
+            disablePortal
+            sx={{
+              width: "100%",
+              "& fieldset": {
+                borderRadius: searchOpen && searchInput ? "16px 16px 0px 0px" : "30px",
+              },
+            }}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                placeholder="Search Pokémon..."
+                size="small"
+                sx={{
+                  textTransform: "capitalize",
+                  "& .MuiAutocomplete-input": { textTransform: "capitalize" },
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: searchOpen && searchInput ? "16px 16px 0px 0px" : "30px",
+                    backgroundColor: "rgba(255, 255, 255, 0.92)",
+                    backdropFilter: "blur(6px)",
+                    boxShadow: "0px 2px 8px 2px rgba(64, 60, 67, .18)",
+                  },
+                  "& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline": {
+                    borderColor: "rgba(0, 0, 0, 0.23)",
+                  },
+                  "& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                    borderColor: "rgba(0, 0, 0, 0.23)",
+                    borderWidth: "1px",
+                  },
+                }}
+              />
+            )}
+            renderOption={({ key, ...params }, option) => (
+              <li key={key} {...params} style={{ textTransform: "capitalize" }}>
+                <div
+                  style={{
+                    background: (() => {
+                      const name = queryableNameToPokemonName(option.name);
+                      const isBaseSpecies = (speciesData as Record<string, number>)[name] !== undefined;
+                      return getPokemonIcon(isBaseSpecies ? name : name.replaceAll("-", ""));
+                    })(),
+                    width: "40px",
+                    height: "30px",
+                    imageRendering: "pixelated" as const,
+                    transform: "scale(1.2)",
+                    marginRight: "4px",
+                  }}
+                />
+                <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                  {option.id > 0 && (
+                    <span style={{
+                      fontSize: "12px",
+                      color: "black",
+                      border: "1px solid black",
+                      padding: "0 6px",
+                      borderRadius: "4px",
+                      backgroundColor: "lightgrey",
+                    }}>
+                      #{option.id}
+                    </span>
+                  )}
+                  <span>{option.label}</span>
+                </div>
+              </li>
+            )}
+          />
+        </div>
         <AtlasPokemonInfoCard
           selectedPokemon={selectedPokemon}
-          onClose={() => setSelectedPokemon(null)}
+          onClose={handleClosePokemon}
         />
       </div>
       <Footer shouldCenter />

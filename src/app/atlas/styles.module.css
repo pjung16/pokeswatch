@@ -369,6 +369,14 @@
   border: 1px solid #9b6470;
 }
 
+.atlasSearchBar {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  width: 300px;
+  z-index: 10;
+}
+
 .settingsIcon:hover {
   filter: brightness(120%);
   transition: all 0.2s ease-in-out;
@@ -386,5 +394,11 @@
     height: 32px;
     font-size: 22px !important;
     margin-right: 10px !important;
+  }
+
+  .atlasSearchBar {
+    width: 200px;
+    left: 8px;
+    top: 8px;
   }
 }

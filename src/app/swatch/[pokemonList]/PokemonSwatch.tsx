@@ -34,6 +34,7 @@ type PokemonIdMap = Record<string, number>
 export const typedPokemonIdMap: PokemonIdMap = pokemonIdMap
 
 interface PokemonSwatchProps {
+  slotIndex?: number
   pokemon: string
   updatePokemonRoute: (
     currentUrl: string,
@@ -42,13 +43,23 @@ interface PokemonSwatchProps {
   ) => void
   colorFormat: TColorFormat
   showAnimations: boolean
+  onExportDataChange?: (
+    slotIndex: number,
+    data: {
+      pokemonName: string
+      spriteUrl: string
+      colors: string[]
+    }
+  ) => void
 }
 
 const PokemonSwatch: React.FC<PokemonSwatchProps> = ({
+  slotIndex,
   pokemon,
   updatePokemonRoute,
   colorFormat,
   showAnimations,
+  onExportDataChange,
 }) => {
   const [selectedPokemon, setSelectedPokemon] = useState<string>(pokemon)
   const [pokemonFromInput, setPokemonFromInput] = useState<{
@@ -134,6 +145,27 @@ const PokemonSwatch: React.FC<PokemonSwatchProps> = ({
       fetchPokemonColors()
     }
   }, [pokemonData, selectedPokemon, fetchPokemonColors])
+
+  useEffect(() => {
+    if (
+      onExportDataChange &&
+      slotIndex !== undefined &&
+      spriteImageUrl &&
+      displayedColors.length >= 3
+    ) {
+      onExportDataChange(slotIndex, {
+        pokemonName: selectedPokemon,
+        spriteUrl: spriteImageUrl,
+        colors: displayedColors.slice(0, 3).map((c) => c.color),
+      })
+    }
+  }, [
+    onExportDataChange,
+    slotIndex,
+    selectedPokemon,
+    spriteImageUrl,
+    displayedColors,
+  ])
 
   // Handle image load for cropping (sprite image still needs cropping for display)
   useEffect(() => {

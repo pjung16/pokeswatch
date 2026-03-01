@@ -4,6 +4,7 @@ import classNames from "classnames"
 import React from "react"
 import styles from "./styles.module.css"
 import ShuffleIcon from "@mui/icons-material/Shuffle"
+import DownloadIcon from "@mui/icons-material/Download"
 import { SwatchPageProvider, useSwatchPageContext } from "./SwatchPageContext"
 import Link from "next/link"
 import PokeballAndLogo from "../components/PokeballAndLogo"
@@ -22,8 +23,13 @@ export default function SwatchLayout({
 }
 
 function SwatchInnerLayout({ children }: { children: React.ReactNode }) {
-  const { colorFormat, setColorFormat, showAnimations, setShowAnimations } =
-    useSwatchPageContext()
+  const {
+    colorFormat,
+    setColorFormat,
+    showAnimations,
+    setShowAnimations,
+    triggerSwatchDownload,
+  } = useSwatchPageContext()
 
   const style: React.CSSProperties = {
     ["--color1" as any]: "#e54545",
@@ -52,6 +58,16 @@ function SwatchInnerLayout({ children }: { children: React.ReactNode }) {
           >
             Randomize
           </Link>
+          <button
+            type="button"
+            className={classNames(
+              styles.buttonSwatchPage,
+              styles.downloadButtonSwatchPage
+            )}
+            onClick={triggerSwatchDownload}
+          >
+            Download PNG
+          </button>
           <a
             className={classNames(
               styles.buttonSwatchPage,
@@ -72,6 +88,16 @@ function SwatchInnerLayout({ children }: { children: React.ReactNode }) {
           >
             <ShuffleIcon />
           </Link>
+          <button
+            type="button"
+            className={classNames(
+              styles.mobileButtonSwatchPage,
+              styles.downloadButtonSwatchPage
+            )}
+            onClick={triggerSwatchDownload}
+          >
+            <DownloadIcon />
+          </button>
           <a
             className={classNames(
               styles.mobileButtonSwatchPage,
