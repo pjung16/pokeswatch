@@ -37,8 +37,12 @@ import { TPokemonAnimationKey } from "../types"
 import AutoAwesomeOutlinedIcon from "@mui/icons-material/AutoAwesomeOutlined"
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome"
 import DownloadIcon from "@mui/icons-material/Download"
+import SaveIcon from "@mui/icons-material/Save"
+import EditIcon from "@mui/icons-material/Edit"
+import DeleteIcon from "@mui/icons-material/Delete"
 import axios from "axios"
 import { IPokemonColorsResponseData } from "@/types/PokemonColorResponseData"
+import { PokemonColorSwapResponse } from "@/types/colorSwap"
 import api from "../api/api"
 import throttle from "lodash.throttle"
 
@@ -128,10 +132,16 @@ function ColorSwitcherContent() {
     animationMap[activePokemonName as TPokemonAnimationKey]
 
   const [pokemonColorData, setPokemonColorData] = useState<IPokemonColorsResponseData | undefined>(undefined)
+  const [savedColorSwaps, setSavedColorSwaps] = useState<PokemonColorSwapResponse[]>([])
+  const pendingSwapRef = useRef<ColorMapping[] | null>(null)
 
   useEffect(() => {
     const img = new Image()
     imgRef.current = img
+
+    api.get<PokemonColorSwapResponse[]>('/color-swaps')
+      .then((response) => setSavedColorSwaps(response.data))
+      .catch(() => {})
   }, [])
 
   const fetchPokemonColors = useCallback(async (isShiny: boolean) => {
@@ -150,11 +160,16 @@ function ColorSwitcherContent() {
         const hexColors = response.data.colors.map(c => c.color)
         setExtractedColors(hexColors)
         // Pre-populate color mappings with all extracted colors
-        const initialMappings = hexColors.map((color) => ({
-          original: color,
-          replacement: color,
-        }))
-        setColorMappings(initialMappings)
+        if (pendingSwapRef.current) {
+          setColorMappings(pendingSwapRef.current)
+          pendingSwapRef.current = null
+        } else {
+          const initialMappings = hexColors.map((color) => ({
+            original: color,
+            replacement: color,
+          }))
+          setColorMappings(initialMappings)
+        }
         window.setTimeout(() => setIsAbsoluteLoading(false), 500)
       })
       .catch((error) => {
@@ -328,19 +343,102 @@ function ColorSwitcherContent() {
     }, 50, { leading: false, trailing: true })
   ).current
 
+  const loadSavedColorSwap = useCallback((swap: PokemonColorSwapResponse) => {
+    const mappings = swap.colors.map((c) => ({
+      original: c.oldColor,
+      replacement: c.newColor,
+    }))
+    setActiveSwapId(swap.id)
+    if (swap.pokemonName === activePokemonName) {
+      setColorMappings(mappings)
+    } else {
+      pendingSwapRef.current = mappings
+      const speciesEntry = (species as Record<string, number>)[swap.pokemonName]
+      if (speciesEntry !== undefined) {
+        setSelectedForm(undefined)
+        setPokemonFromInput({ label: swap.pokemonName, id: speciesEntry })
+      } else {
+        const baseName = swap.pokemonName.split("-")[0]
+        const baseEntry = (species as Record<string, number>)[baseName]
+        if (baseEntry !== undefined) {
+          setSelectedForm(swap.pokemonName)
+          setPokemonFromInput({ label: baseName, id: baseEntry })
+        } else {
+          setColorMappings(mappings)
+          pendingSwapRef.current = null
+        }
+      }
+    }
+  }, [activePokemonName])
+
+  const [isSaving, setIsSaving] = useState(false)
+  const [activeSwapId, setActiveSwapId] = useState<string | null>(null)
+
+  const saveColorSwap = useCallback(() => {
+    if (colorMappings.length === 0) return
+    setIsSaving(true)
+    const colors = colorMappings.map((m) => ({
+      oldColor: m.original,
+      newColor: m.replacement,
+    }))
+    api.post<PokemonColorSwapResponse>('/color-swaps', {
+      pokemonName: activePokemonName,
+      colors,
+    })
+      .then((response) => {
+        setSavedColorSwaps((prev) => [response.data, ...prev])
+      })
+      .catch((error) => {
+        console.error("Failed to save color swap:", error)
+      })
+      .finally(() => setIsSaving(false))
+  }, [colorMappings, activePokemonName])
+
+  const updateColorSwap = useCallback(() => {
+    if (!activeSwapId || colorMappings.length === 0) return
+    setIsSaving(true)
+    const colors = colorMappings.map((m) => ({
+      oldColor: m.original,
+      newColor: m.replacement,
+    }))
+    api.patch<PokemonColorSwapResponse>(`/color-swaps/${activeSwapId}`, { colors })
+      .then((response) => {
+        setSavedColorSwaps((prev) =>
+          prev.map((s) => (s.id === activeSwapId ? response.data : s))
+        )
+      })
+      .catch((error) => {
+        console.error("Failed to update color swap:", error)
+      })
+      .finally(() => setIsSaving(false))
+  }, [activeSwapId, colorMappings])
+
+  const deleteColorSwap = useCallback((swapId: string) => {
+    setSavedColorSwaps((prev) => prev.filter((s) => s.id !== swapId))
+    if (activeSwapId === swapId) setActiveSwapId(null)
+    api.delete(`/color-swaps/${swapId}`)
+      .catch((error) => {
+        console.error("Failed to delete color swap:", error)
+      })
+  }, [activeSwapId])
+
+  const activeColors = colorMappings.length > 0
+    ? colorMappings.map((m) => m.replacement)
+    : extractedColors
+
   const backgroundColor =
-    extractedColors.length > 0 ? extractedColors[0] : "#D0CFCF"
+    activeColors.length > 0 ? activeColors[0] : "#D0CFCF"
   const baseFontColor = getContrastingBaseTextColor(backgroundColor)
 
   const style: React.CSSProperties = {
     backgroundColor: `${backgroundColor}CC`,
     color: baseFontColor,
-    ["--color1" as any]: extractedColors[0] ?? "#D0CFCF",
-    ["--color2" as any]: extractedColors[1] ?? "#7A7D7D",
-    ["--color2-light" as any]: `${extractedColors[1] ?? "#7A7D7D"}CC`,
-    ["--color3" as any]: extractedColors[2] ?? "#565254",
-    ["--color4" as any]: extractedColors[3] ?? "#FFFBFE",
-    ["--color4-light" as any]: `${extractedColors[3] ?? "#FFFBFE"}CC`,
+    ["--color1" as any]: activeColors[0] ?? "#D0CFCF",
+    ["--color2" as any]: activeColors[1] ?? "#7A7D7D",
+    ["--color2-light" as any]: `${activeColors[1] ?? "#7A7D7D"}CC`,
+    ["--color3" as any]: activeColors[2] ?? "#565254",
+    ["--color4" as any]: activeColors[3] ?? "#FFFBFE",
+    ["--color4-light" as any]: `${activeColors[3] ?? "#FFFBFE"}CC`,
   }
 
   const [isMounted, setIsMounted] = useState(false)
@@ -496,10 +594,94 @@ function ColorSwitcherContent() {
               onChange={(_, newValue) => {
                 if (newValue) {
                   setPokemonFromInput(newValue)
+                  setActiveSwapId(null)
                 }
               }}
             />
           </div>
+          {savedColorSwaps.length > 0 && (
+            <FormControl className={styles.savedSwapsSelect}>
+              <Select
+                value={activeSwapId ?? ""}
+                displayEmpty
+                onChange={(e) => {
+                  const swap = savedColorSwaps.find((s) => s.id === e.target.value)
+                  if (swap) loadSavedColorSwap(swap)
+                }}
+                sx={{
+                  color: "inherit",
+                  backgroundColor: "rgba(255, 255, 255)",
+                  borderRadius: "30px",
+                  boxShadow: "0px 2px 8px 2px rgba(64, 60, 67, .24)",
+                  padding: "0px 16px",
+                  "& .MuiOutlinedInput-notchedOutline": {
+                    borderColor: "rgba(0, 0, 0, 0.23)",
+                  },
+                  "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                    borderColor: "rgba(0, 0, 0, 0.23)",
+                    borderWidth: "1px",
+                  },
+                  "&:hover .MuiOutlinedInput-notchedOutline": {
+                    borderColor: "rgba(0, 0, 0, 0.23)",
+                  },
+                }}
+                renderValue={(value) => {
+                  if (!value) return "Saved Swaps"
+                  const swap = savedColorSwaps.find((s) => s.id === value)
+                  console.log(swap)
+                  return swap ? (
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", width: "100%" , color: "black", height: "23px"}}>
+                      <div style={{ background: getPokemonIcon(
+                            (species as Record<string, number>)[swap.pokemonName] !== undefined
+                              ? swap.pokemonName
+                              : swap.pokemonName.replaceAll("-", "")
+                          ), width: "40px", height: "30px", imageRendering: "pixelated", transform: "scale(1.2)" }} />
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
+                        <div style={{ textTransform: "capitalize" }}>{swap.pokemonName.replaceAll("-", " ")}</div>
+                        <div style={{ fontSize: "11px", opacity: 0.6 }}>
+                          {new Date(swap.createdAt).toLocaleDateString()}
+                        </div>
+                      </div>
+                    </div>
+                  ) : ""
+                }}
+              >
+                {savedColorSwaps.map((swap) => (
+                  <MenuItem key={swap.id} value={swap.id} style={{ textTransform: "capitalize" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", width: "100%" }}>
+                      <div
+                        style={{
+                          background: getPokemonIcon(
+                            (species as Record<string, number>)[swap.pokemonName] !== undefined
+                              ? swap.pokemonName
+                              : swap.pokemonName.replaceAll("-", "")
+                          ),
+                          width: "40px",
+                          height: "30px",
+                          imageRendering: "pixelated" as const,
+                          transform: "scale(1.2)",
+                        }}
+                      />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div>{swap.pokemonName.replaceAll("-", " ")}</div>
+                        <div style={{ fontSize: "11px", opacity: 0.6 }}>
+                          {new Date(swap.createdAt).toLocaleDateString()}
+                        </div>
+                      </div>
+                      <DeleteIcon
+                        fontSize="small"
+                        sx={{ opacity: 0.5, "&:hover": { opacity: 1 }, ml: "auto", flexShrink: 0 }}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          deleteColorSwap(swap.id)
+                        }}
+                      />
+                    </div>
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          )}
         </div>
       </header>
       <div
@@ -521,41 +703,41 @@ function ColorSwitcherContent() {
             <div className={styles.contentContainerTopSection}>
               <div className={styles.pokemonName}>
                 {activePokemonName.replaceAll("-", " ")}
+                {!pokemonFormsWithNoShinySprite.includes(activePokemonName) && <Button
+                  id="toggleShinyButton"
+                  onClick={() => {
+                    setShowShinySprite(!showShinySprite)
+                  }}
+                  sx={{
+                    color: "inherit",
+                    position: "relative",
+                    "&:hover": {
+                      backgroundColor: "rgba(255, 255, 255, 0.3)",
+                    },
+                    borderRadius: "50%",
+                    minWidth: "35px",
+                    minHeight: "35px",
+                    padding: "9px",
+                    marginLeft: "16px",
+                  }}
+                  size="small"
+                  disableRipple
+                >
+                  {showShinySprite ? (
+                    <AutoAwesomeIcon
+                      style={{
+                        cursor: "pointer",
+                      }}
+                    />
+                  ) : (
+                    <AutoAwesomeOutlinedIcon
+                      style={{
+                        cursor: "pointer",
+                      }}
+                    />
+                  )}
+                </Button>}
               </div>
-              {!pokemonFormsWithNoShinySprite.includes(activePokemonName) && <Button
-                id="toggleShinyButton"
-                onClick={() => {
-                  setShowShinySprite(!showShinySprite)
-                }}
-                sx={{
-                  color: "inherit",
-                  position: "relative",
-                  "&:hover": {
-                    backgroundColor: "rgba(255, 255, 255, 0.3)",
-                  },
-                  borderRadius: "50%",
-                  minWidth: "35px",
-                  minHeight: "35px",
-                  padding: "9px",
-                  marginLeft: "16px",
-                }}
-                size="small"
-                disableRipple
-              >
-                {showShinySprite ? (
-                  <AutoAwesomeIcon
-                    style={{
-                      cursor: "pointer",
-                    }}
-                  />
-                ) : (
-                  <AutoAwesomeOutlinedIcon
-                    style={{
-                      cursor: "pointer",
-                    }}
-                  />
-                )}
-              </Button>}
               {speciesData &&
                 basePokemonData &&
                 (speciesData.varieties.length > 1 ||
@@ -650,6 +832,46 @@ function ColorSwitcherContent() {
                       alt="pokemon"
                       className={styles.pokemonSprite}
                     />
+                  )}
+                  {colorMappings.length > 0 && modifiedImageUrl && (
+                    <div className={styles.saveButtonGroup}>
+                      {activeSwapId && (
+                        <Button
+                          onClick={updateColorSwap}
+                          variant="outlined"
+                          disabled={isSaving}
+                          startIcon={<EditIcon />}
+                          sx={{
+                            color: "inherit",
+                            borderColor: "inherit",
+                            textTransform: "none",
+                            "&:hover": {
+                              borderColor: "inherit",
+                              backgroundColor: "rgba(255, 255, 255, 0.1)",
+                            },
+                          }}
+                        >
+                          Update
+                        </Button>
+                      )}
+                      <Button
+                        onClick={saveColorSwap}
+                        variant="outlined"
+                        disabled={isSaving}
+                        startIcon={<SaveIcon />}
+                        sx={{
+                          color: "inherit",
+                          borderColor: "inherit",
+                          textTransform: "none",
+                          "&:hover": {
+                            borderColor: "inherit",
+                            backgroundColor: "rgba(255, 255, 255, 0.1)",
+                          },
+                        }}
+                      >
+                        Save
+                      </Button>
+                    </div>
                   )}
                 </div>
                 <div className={styles.spriteContainer}>

@@ -466,35 +466,6 @@
   },
   {
     "data": {
-      "id": "cmkyd9rbd01wz12lteh85ws0m",
-      "name": "eternal-floette",
-      "colorHex": "#f8f8f8",
-      "allColors": [
-        "#f8f8f8",
-        "#403d3d",
-        "#d94c4c",
-        "#4068b8",
-        "#802d2d",
-        "#595959",
-        "#666161",
-        "#ff7373",
-        "#bfbfbf",
-        "#243a66",
-        "#515151",
-        "#fffbfb"
-      ],
-      "width": 62,
-      "height": 67,
-      "filename": "2670.png",
-      "tag": "00"
-    },
-    "x": 325,
-    "y": 149,
-    "width": 62,
-    "height": 67
-  },
-  {
-    "data": {
       "id": "cmkyd9s1r022v12lt49tav1xr",
       "name": "floette-eternal",
       "colorHex": "#f8f8f8",

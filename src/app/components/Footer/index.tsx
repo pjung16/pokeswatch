@@ -26,6 +26,9 @@ const Footer: React.FC<{ shouldCenter?: boolean }> = ({ shouldCenter }) => {
           <Link href="/color-swapper" className={styles.sitemapLink}>
             Color Swapper
           </Link>
+          <Link href="/atlas" className={styles.sitemapLink}>
+            Pokémon Atlas
+          </Link>
         </div>
       </div>
 

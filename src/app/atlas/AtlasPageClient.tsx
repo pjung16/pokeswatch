@@ -50,10 +50,15 @@ export default function AtlasPageClient() {
     for (const p of positioned) {
       if (seen.has(p.data.name)) continue;
       seen.add(p.data.name);
-      const baseName = p.data.name.split("-")[0];
-      const dexId = (speciesData as Record<string, number>)[p.data.name]
-        ?? (speciesData as Record<string, number>)[baseName]
-        ?? 0;
+      let dexId = (speciesData as Record<string, number>)[p.data.name] ?? 0;
+      if (!dexId) {
+        const parts = p.data.name.split("-");
+        for (let i = parts.length - 1; i >= 1; i--) {
+          const candidate = parts.slice(0, i).join("-");
+          const id = (speciesData as Record<string, number>)[candidate];
+          if (id !== undefined) { dexId = id; break; }
+        }
+      }
       const displayName = p.data.name
         .replaceAll("-", " ")
         .split(" ")
@@ -64,12 +69,22 @@ export default function AtlasPageClient() {
     return options.sort((a, b) => a.id - b.id || a.name.localeCompare(b.name));
   }, []);
 
-  const handleSelectPokemon = useCallback((pokemonName: string) => {
+  const handleSelectPokemon = useCallback((pokemonName: string, { highlight = true } = {}) => {
     const pokemon = (positioned as IPokemonSprite[]).find(p => p.data.name === pokemonName);
     if (pokemon) {
-      highlightedRef.current = pokemon;
-      panToRef.current?.(pokemon);
+      if (highlight) {
+        highlightedRef.current = pokemon;
+        panToRef.current?.(pokemon);
+      } else {
+        highlightedRef.current = null;
+      }
       setSelectedPokemon(pokemon);
+      const displayName = pokemon.data.name
+        .replaceAll("-", " ")
+        .split(" ")
+        .map((w: string) => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(" ");
+      setSearchInput(displayName);
       const url = new URL(window.location.href);
       url.searchParams.set('pokemon', pokemon.data.name);
       window.history.replaceState({}, '', url.toString());
@@ -79,6 +94,7 @@ export default function AtlasPageClient() {
   const handleClosePokemon = useCallback(() => {
     highlightedRef.current = null;
     setSelectedPokemon(null);
+    setSearchInput("");
     const url = new URL(window.location.href);
     url.searchParams.delete('pokemon');
     window.history.replaceState({}, '', url.toString());
@@ -428,11 +444,7 @@ export default function AtlasPageClient() {
           const worldY = (touchCanvasY - offsetY) / scale;
           const tapped = findHovered(positioned, worldX, worldY);
           if (tapped) {
-            highlightedRef.current = null;
-            setSelectedPokemon(tapped);
-            const url = new URL(window.location.href);
-            url.searchParams.set('pokemon', tapped.data.name);
-            window.history.replaceState({}, '', url.toString());
+            handleSelectPokemon(tapped.data.name, { highlight: false });
           }
         }
       }
@@ -579,11 +591,7 @@ export default function AtlasPageClient() {
       }
       // Keep the current card open when clicking empty canvas.
       if (!hovered) return;
-      highlightedRef.current = null;
-      setSelectedPokemon(hovered);
-      const url = new URL(window.location.href);
-      url.searchParams.set('pokemon', hovered.data.name);
-      window.history.replaceState({}, '', url.toString());
+      handleSelectPokemon(hovered.data.name, { highlight: false });
     };
     canvas.addEventListener("click", handleClick);
 
@@ -657,6 +665,12 @@ export default function AtlasPageClient() {
             offsetY = targetOffsetY;
             highlightedRef.current = found;
             setSelectedPokemon(found);
+            const displayName = found.data.name
+              .replaceAll("-", " ")
+              .split(" ")
+              .map((w: string) => w.charAt(0).toUpperCase() + w.slice(1))
+              .join(" ");
+            setSearchInput(displayName);
           }
         }
       }
@@ -732,16 +746,20 @@ export default function AtlasPageClient() {
             onClose={() => setSearchOpen(false)}
             inputValue={searchInput}
             onInputChange={(_, value, reason) => {
-              if (reason !== 'reset') {
+              if (reason === 'input') {
                 setSearchInput(value);
               }
             }}
             autoHighlight
             options={atlasSearchOptions}
             getOptionLabel={(option) => option.label}
-            filterOptions={(options, state) => {
-              const input = state.inputValue.toLowerCase();
+            filterOptions={(options) => {
+              const input = (searchInput || "").toLowerCase();
               if (!input) return [];
+              const exactMatch = options.find(o => o.label.toLowerCase() === input);
+              if (exactMatch && exactMatch.id > 0) {
+                return options.filter(o => o.id === exactMatch.id);
+              }
               return options.filter(
                 (option) =>
                   option.label.toLowerCase().includes(input) ||
@@ -752,7 +770,6 @@ export default function AtlasPageClient() {
             onChange={(_, value) => {
               if (value) {
                 handleSelectPokemon(value.name);
-                setSearchInput("");
               }
             }}
             isOptionEqualToValue={(option, value) => option.name === value.name}
@@ -785,30 +802,68 @@ export default function AtlasPageClient() {
                 borderRadius: searchOpen && searchInput ? "16px 16px 0px 0px" : "30px",
               },
             }}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                placeholder="Search Pokémon..."
-                size="small"
-                sx={{
-                  textTransform: "capitalize",
-                  "& .MuiAutocomplete-input": { textTransform: "capitalize" },
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: searchOpen && searchInput ? "16px 16px 0px 0px" : "30px",
-                    backgroundColor: "rgba(255, 255, 255, 0.92)",
-                    backdropFilter: "blur(6px)",
-                    boxShadow: "0px 2px 8px 2px rgba(64, 60, 67, .18)",
-                  },
-                  "& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline": {
-                    borderColor: "rgba(0, 0, 0, 0.23)",
-                  },
-                  "& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                    borderColor: "rgba(0, 0, 0, 0.23)",
-                    borderWidth: "1px",
-                  },
-                }}
-              />
-            )}
+            renderInput={(params) => {
+              const selectedOption = selectedPokemon
+                ? atlasSearchOptions.find(o => o.name === selectedPokemon.data.name)
+                : null;
+              return (
+                <TextField
+                  {...params}
+                  placeholder="Search Pokémon..."
+                  size="small"
+                  sx={{
+                    textTransform: "capitalize",
+                    "& .MuiAutocomplete-input": { textTransform: "capitalize", padding: "4px !important" },
+                    "& .MuiOutlinedInput-root": {
+                      borderRadius: searchOpen && searchInput ? "16px 16px 0px 0px" : "30px",
+                      backgroundColor: "rgba(255, 255, 255, 0.92)",
+                      backdropFilter: "blur(6px)",
+                      boxShadow: "0px 2px 8px 2px rgba(64, 60, 67, .18)",
+                    },
+                    "& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline": {
+                      borderColor: "rgba(0, 0, 0, 0.23)",
+                    },
+                    "& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                      borderColor: "rgba(0, 0, 0, 0.23)",
+                      borderWidth: "1px",
+                    },
+                  }}
+                  InputProps={{
+                    ...params.InputProps,
+                    startAdornment: selectedOption ? (
+                      <div style={{ display: "flex", alignItems: "center", gap: "4px", marginRight: "4px" }}>
+                        <div
+                          style={{
+                            background: (() => {
+                              const name = queryableNameToPokemonName(selectedOption.name);
+                              const isBaseSpecies = (speciesData as Record<string, number>)[name] !== undefined;
+                              return getPokemonIcon(isBaseSpecies ? name : name.replaceAll("-", ""));
+                            })(),
+                            width: "40px",
+                            height: "30px",
+                            imageRendering: "pixelated" as const,
+                            transform: "scale(1.2)",
+                          }}
+                        />
+                        {selectedOption.id > 0 && (
+                          <span style={{
+                            fontSize: "12px",
+                            color: "black",
+                            border: "1px solid black",
+                            padding: "0 6px",
+                            borderRadius: "4px",
+                            backgroundColor: "lightgrey",
+                            whiteSpace: "nowrap",
+                          }}>
+                            #{selectedOption.id}
+                          </span>
+                        )}
+                      </div>
+                    ) : null,
+                  }}
+                />
+              );
+            }}
             renderOption={({ key, ...params }, option) => (
               <li key={key} {...params} style={{ textTransform: "capitalize" }}>
                 <div

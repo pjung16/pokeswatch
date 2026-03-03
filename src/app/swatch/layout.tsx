@@ -68,17 +68,6 @@ function SwatchInnerLayout({ children }: { children: React.ReactNode }) {
           >
             Download PNG
           </button>
-          <a
-            className={classNames(
-              styles.buttonSwatchPage,
-              styles.supportButton
-            )}
-            href="https://buymeacoffee.com/pjung16"
-            target="_blank"
-            rel="noreferrer"
-          >
-            Support 🍕
-          </a>
           <Link
             className={classNames(
               styles.mobileButtonSwatchPage,
@@ -98,17 +87,6 @@ function SwatchInnerLayout({ children }: { children: React.ReactNode }) {
           >
             <DownloadIcon />
           </button>
-          <a
-            className={classNames(
-              styles.mobileButtonSwatchPage,
-              styles.supportButton
-            )}
-            href="https://buymeacoffee.com/pjung16"
-            target="_blank"
-            rel="noreferrer"
-          >
-            🍕
-          </a>
           <SettingsMenu
             className={styles.settingsIconSwatchPage}
             iconColor="black"

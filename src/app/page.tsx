@@ -66,6 +66,9 @@ export default function Home() {
           <Link href="/color-swapper" className={styles.button}>
             Color Swapper
           </Link>
+          <Link href="/atlas" className={styles.button}>
+            Pokémon Atlas
+          </Link>
         </div>
       </main>
     </div>

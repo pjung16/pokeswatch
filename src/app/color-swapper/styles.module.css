@@ -21,6 +21,10 @@
   margin: 0 40px;
 }
 
+.savedSwapsSelect {
+  min-width: 200px;
+}
+
 .contentContainer {
   width: calc(100vw - 282px);
   display: flex;
@@ -55,6 +59,8 @@
   justify-content: center;
   margin-bottom: 24px;
   margin-left: calc(166px - 25px - 40px);
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
 .contentContainerTopSection {
@@ -357,10 +363,27 @@
   .pokemonTeamAndComboboxWrapper {
     margin: 0 auto;
     margin-bottom: 24px;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 0 20px;
+    width: 100%;
+    max-width: 400px;
   }
 
   .comboboxContainer {
-    margin-left: 0;
+    margin: 0;
+    width: 100%;
+  }
+
+  .savedSwapsSelect {
+    min-width: unset;
+    width: 100%;
+  }
+
+  .contentContainerTopSection {
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
   }
 
   .controlsSection {
@@ -401,6 +424,16 @@
   .applyButton {
     width: 100%;
   }
+
+  .saveButtonGroup {
+    flex-direction: column;
+  }
+}
+
+.saveButtonGroup {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
 }
 
 .settingsIcon {
